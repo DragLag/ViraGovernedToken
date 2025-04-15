@@ -10,6 +10,17 @@ contract ViraGovernedToken is ERC20, Ownable {
     address[] public holders;
     mapping(address => bool) internal isHolder;
 
+    struct Vote {
+        address target;
+        uint256 count;
+        bool executed;
+        uint256 timestamp;
+        uint256 duration;
+    }
+
+    mapping(address => Vote) public redistributionVotes;
+    mapping(address => mapping(address => bool)) public hasVoted;
+
     constructor() ERC20("ViraGovernedToken", "VGT") {
         authorizedOperators[msg.sender] = true;
     }
@@ -86,7 +97,76 @@ contract ViraGovernedToken is ERC20, Ownable {
         return poorUsers;
     }
 
-    function redistribute(address richUser) public onlyOperator {
+    function proposeRedistribution(address richUser, uint256 duration) public onlyOperator {
+        require(balanceOf(richUser) > 0, "User has no tokens");
+
+        Vote storage vote = redistributionVotes[richUser];
+
+        if (vote.target != richUser || block.timestamp > vote.timestamp + vote.duration) {
+            redistributionVotes[richUser] = Vote({
+                target: richUser,
+                count: 1,
+                executed: false,
+                timestamp: block.timestamp,
+                duration: duration
+            });
+            hasVoted[richUser][msg.sender] = true;
+        } else {
+            require(!vote.executed, "Redistribution already executed");
+            require(!hasVoted[richUser][msg.sender], "Already voted");
+
+            vote.count++;
+            hasVoted[richUser][msg.sender] = true;
+        }
+
+        uint256 totalOperators = 0;
+        for (uint256 i = 0; i < holders.length; i++) {
+            if (authorizedOperators[holders[i]]) totalOperators++;
+        }
+        if (authorizedOperators[owner()]) totalOperators++;
+
+        if (vote.count > totalOperators / 2) {
+            _executeRedistribution(richUser);
+            redistributionVotes[richUser].executed = true;
+        }
+    }
+
+    function cancelRedistributionVote(address richUser) public onlyOperator {
+        Vote storage vote = redistributionVotes[richUser];
+        require(block.timestamp > vote.timestamp + vote.duration, "Vote still active");
+        delete redistributionVotes[richUser];
+    }
+
+    function getActiveVotes() public view returns (address[] memory activeRichUsers) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < holders.length; i++) {
+            address user = holders[i];
+            Vote storage vote = redistributionVotes[user];
+            if (
+                vote.target == user &&
+                !vote.executed &&
+                block.timestamp <= vote.timestamp + vote.duration
+            ) {
+                count++;
+            }
+        }
+
+        activeRichUsers = new address[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < holders.length; i++) {
+            address user = holders[i];
+            Vote storage vote = redistributionVotes[user];
+            if (
+                vote.target == user &&
+                !vote.executed &&
+                block.timestamp <= vote.timestamp + vote.duration
+            ) {
+                activeRichUsers[idx++] = user;
+            }
+        }
+    }
+
+    function _executeRedistribution(address richUser) internal {
         uint256 totalTokens = 0;
         uint256 numUsers = 0;
 
@@ -102,13 +182,13 @@ contract ViraGovernedToken is ERC20, Ownable {
         uint256 averageBalance = totalTokens / numUsers;
         uint256 richBalance = balanceOf(richUser);
 
-        require(richBalance > averageBalance, "The user does not have a balance above the average");
+        require(richBalance > averageBalance, "User is not richer than average");
 
         uint256 excess = richBalance - averageBalance;
         address[] memory poorUsers = getPoorUsers();
         uint256 numPoorUsers = poorUsers.length;
 
-        require(numPoorUsers > 0, "No poor users available for redistribution");
+        require(numPoorUsers > 0, "No poor users to redistribute to");
 
         uint256 amountPerUser = excess / numPoorUsers;
 
@@ -122,7 +202,7 @@ contract ViraGovernedToken is ERC20, Ownable {
         }
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20) {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         require(!isBlocked[from], "Sender is blocked");
         require(!isBlocked[to], "Recipient is blocked");
         super._beforeTokenTransfer(from, to, amount);

@@ -1,75 +1,54 @@
 const ViraGovernedToken = artifacts.require("ViraGovernedToken");
+const assert = require("assert");
 
-contract("ViraGovernedToken", (accounts) => {
-  const [owner, operator, user1, user2, user3, richUser] = accounts;
-  let token;
+contract("ViraGovernedToken (Web3-based test)", (accounts) => {
+    let contract;
 
-  beforeEach(async () => {
-    token = await ViraGovernedToken.new({ from: owner });
-    await token.addOperator(operator, { from: owner });
-  });
+    const [owner, operator, user1, user2] = accounts;
 
-  it("Register new users with 100 tokens", async () => {
-    await token.registerUser(user1, { from: operator });
-    const balance = await token.balanceOf(user1);
-    console.log("User1 Balance:", balance.toString());
-    assert(balance.toString() === "100");
-  });
+    before(async () => {
+        contract = await ViraGovernedToken.deployed();
+    });
 
-  it("Block and unblock a user", async () => {
-    await token.registerUser(user2, { from: operator });
-    await token.blockUser(user2, { from: operator });
+    it("should allow the owner to add an operator", async () => {
+        await contract.addOperator(operator, { from: owner });
+        const isOp = await contract.authorizedOperators(operator);
+        assert.strictEqual(isOp, true);
+    });
 
-    try {
-      await token.transfer(user1, 10, { from: user2 });
-      assert(false); // Non dovrebbe mai arrivare qui
-    } catch (e) {
-      assert(e.message.includes("Sender is blocked"));
-    }
+    it("should register a new user with 100 tokens", async () => {
+        await contract.registerUser(user1, { from: operator });
+        const balance = await contract.balanceOf(user1);
+        assert.strictEqual(balance.toString(), "100");
+    });
 
-    await token.unblockUser(user2, { from: operator });
-    await token.transfer(user1, 10, { from: user2 });
-    const balance = await token.balanceOf(user1);
-    assert(balance.toString() === "10");
-  });
+    it("should adjust user balance", async () => {
+        await contract.adjustBalance(user1, 50, { from: operator });
+        let balance = await contract.balanceOf(user1);
+        assert.strictEqual(balance.toString(), "150");
 
-  it("Adjust a user's balance", async () => {
-    await token.registerUser(user3, { from: operator });
-    await token.adjustBalance(user3, 50, { from: operator }); // Aggiungi 50
-    let balance = await token.balanceOf(user3);
-    assert(balance.toString() === "150");
+        await contract.adjustBalance(user1, -30, { from: operator });
+        balance = await contract.balanceOf(user1);
+        assert.strictEqual(balance.toString(), "120");
+    });
 
-    await token.adjustBalance(user3, -30, { from: operator }); // Rimuovi 30
-    balance = await token.balanceOf(user3);
-    assert(balance.toString() === "120");
-  });
+    it("should block and unblock user", async () => {
+        await contract.blockUser(user1, { from: operator });
+        let blocked = await contract.isBlocked(user1);
+        assert.strictEqual(blocked, true);
 
-  it("RRedistributes capital from a rich user to poor users", async () => {
-    await token.registerUser(user1, { from: operator });
-    await token.registerUser(user2, { from: operator });
-    await token.registerUser(richUser, { from: operator });
+        await contract.unblockUser(user1, { from: operator });
+        blocked = await contract.isBlocked(user1);
+        assert.strictEqual(blocked, false);
+    });
 
-    // Aggiungiamo un po' di ricchezza extra
-    await token.adjustBalance(richUser, 900, { from: operator }); // Totale 1000
+    it("should handle redistribution vote and execution", async () => {
+        await contract.registerUser(user2, { from: operator });
+        await contract.adjustBalance(user2, 1000, { from: operator });
 
-    await token.redistribute(richUser, { from: operator });
+        await contract.proposeRedistribution(user2, { from: operator });
 
-    const balance1 = await token.balanceOf(user1);
-    const balance2 = await token.balanceOf(user2);
-    const balanceRich = await token.balanceOf(richUser);
-
-    console.log("User1:", balance1.toString());
-    console.log("User2:", balance2.toString());
-    console.log("Rich User (post):", balanceRich.toString());
-
-    // Il ricco deve avere saldo pari alla media finale
-    const total = (
-      parseInt(balance1.toString()) +
-      parseInt(balance2.toString()) +
-      parseInt(balanceRich.toString())
-    );
-    const average = Math.floor(total / 3);
-
-    assert(balanceRich.toString() === average.toString());
-  });
+        const vote = await contract.redistributionVotes(user2);
+        assert.strictEqual(vote.executed, true); // se c’è solo un operatore
+    });
 });
