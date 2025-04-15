@@ -1,0 +1,37 @@
+# Node.js dependencies
+node_modules/
+
+# Compiled contracts
+/build/
+artifacts/
+
+# Truffle specific files
+/.openzeppelin/
+migration/
+
+# Hardhat specific files
+/cache/
+/typechain/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor specific files
+.idea/
+.vscode/
+
+# Package lock files
+package-lock.json
+yarn.lock
+
+#justfile
+justfile
