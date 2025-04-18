@@ -6,8 +6,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ViraGovernedToken is ERC20, Ownable {
     mapping(address => bool) public authorizedOperators;
+    mapping(address => bool) public authorizedIssuers;
     mapping(address => bool) public isBlocked;
     address[] public holders;
+    address[] public operatorList;
     mapping(address => bool) internal isHolder;
 
     struct Vote {
@@ -31,25 +33,53 @@ contract ViraGovernedToken is ERC20, Ownable {
     }
 
     function addOperator(address operator) public onlyOwner {
+       require(!authorizedOperators[operator], "Already an operator");
         authorizedOperators[operator] = true;
+        operatorList.push(operator); 
     }
 
     function removeOperator(address operator) public onlyOwner {
-        authorizedOperators[operator] = false;
+         authorizedOperators[operator] = false;
+         for (uint256 i = 0; i < operatorList.length; i++) {
+            if (operatorList[i] == operator) {
+                operatorList[i] = operatorList[operatorList.length - 1];
+                operatorList.pop();
+                break;
+            }
+        }
     }
 
-    function registerUser(address user) public onlyOperator {
+     modifier onlyIssuer() {
+        require(authorizedIssuers[msg.sender], "Not authorized");
+        _;
+    }
+
+    function addIssuer(address issuer) public onlyOwner {
+        authorizedIssuers[issuer] = true;
+    }
+
+    function removeIssuer(address issuer) public onlyOwner {
+        authorizedIssuers[issuer] = false;
+    }
+
+    modifier onlyAuthorized() {
+    require(
+        authorizedOperators[msg.sender] || authorizedIssuers[msg.sender],
+        "Not authorized"
+        );
+        _;
+    }
+
+    function registerUser(address user) public onlyAuthorized {
         require(balanceOf(user) == 0, "User already registered");
-        _mint(user, 100);
         if (!isHolder[user]) {
             holders.push(user);
             isHolder[user] = true;
         }
     }
 
-    function adjustBalance(address user, int256 amount) public onlyOperator {
+    function adjustBalance(address user, int256 amount) public onlyIssuer {
         require(!isBlocked[user], "User is blocked");
-
         if (amount > 0) {
             _mint(user, uint256(amount));
         } else {
@@ -119,11 +149,7 @@ contract ViraGovernedToken is ERC20, Ownable {
             hasVoted[richUser][msg.sender] = true;
         }
 
-        uint256 totalOperators = 0;
-        for (uint256 i = 0; i < holders.length; i++) {
-            if (authorizedOperators[holders[i]]) totalOperators++;
-        }
-        if (authorizedOperators[owner()]) totalOperators++;
+        uint256 totalOperators = operatorList.length;
 
         if (vote.count > totalOperators / 2) {
             _executeRedistribution(richUser);
@@ -164,6 +190,18 @@ contract ViraGovernedToken is ERC20, Ownable {
                 activeRichUsers[idx++] = user;
             }
         }
+    }
+
+    function checkAndExecuteRedistribution(address richUser) public onlyOperator {
+    Vote storage vote = redistributionVotes[richUser];
+    require(!vote.executed, "Already executed");
+
+    uint256 totalOperators = operatorList.length;
+
+    if (vote.count > totalOperators / 2) {
+        _executeRedistribution(richUser);
+        vote.executed = true;
+    }
     }
 
     function _executeRedistribution(address richUser) internal {
