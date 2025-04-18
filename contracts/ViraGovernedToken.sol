@@ -11,6 +11,7 @@ contract ViraGovernedToken is ERC20, Ownable {
     address[] public holders;
     address[] public operatorList;
     mapping(address => bool) internal isHolder;
+    
 
     struct Vote {
         address target;
@@ -31,6 +32,10 @@ contract ViraGovernedToken is ERC20, Ownable {
         require(authorizedOperators[msg.sender], "Not authorized");
         _;
     }
+
+    function isHolderAddress(address user) public view returns (bool) {
+    return isHolder[user];
+}
 
     function addOperator(address operator) public onlyOwner {
        require(!authorizedOperators[operator], "Already an operator");
