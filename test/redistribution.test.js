@@ -12,19 +12,19 @@ contract("ViraGovernedToken", accounts => {
     //issuer
     await contract.addIssuer(issuer, { from: owner });
 
-    // Nomina operator
+    // operators
     await contract.addOperator(operator, { from: owner });
     await contract.addOperator(operator2, { from: owner });
     await contract.addOperator(operator3, { from: owner });
 
 
-    // Registra utenti
+    // users
     await contract.registerUser(user1, { from: issuer });
     await contract.registerUser(user2, { from: issuer });
     await contract.registerUser(user3, { from: issuer });
  
 
-    // Aggiungi token extra a user2 per farlo diventare "ricco"
+    // adjust balances
     await contract.adjustBalance(user1, 100, { from: issuer });
     await contract.adjustBalance(user2, 1100, { from: issuer });
     await contract.adjustBalance(user3, 100, { from: issuer });
@@ -35,7 +35,6 @@ contract("ViraGovernedToken", accounts => {
   it("should allow vote for redistribution as soon ad more than 50% of preferences is reached", async () => {
     await contract.proposeRedistribution(user2, duration, { from: operator });
     await contract.proposeRedistribution(user2, duration, { from: operator2 }); 
-    //await contract.proposeRedistribution(user2, duration, { from: operator3 });
 
     const balanceUser1 = await contract.balanceOf(user1);
     const balanceUser2 = await contract.balanceOf(user2);
@@ -46,8 +45,8 @@ contract("ViraGovernedToken", accounts => {
     console.log("Balance after redistribution user3:", balanceUser3.toString());
 
     
-    assert(balanceUser1 > 100);  // Deve aver ricevuto
-    assert(balanceUser2 < 1100); // Deve aver perso qualcosa
+    assert(balanceUser1 > 100);  // should lose something
+    assert(balanceUser2 < 1100); // should gain something
     assert(balanceUser3 > 100);
   });
 
@@ -58,7 +57,6 @@ contract("ViraGovernedToken", accounts => {
       await contract.checkAndExecuteRedistribution(user2, { from: operator });
       assert.fail("The proposed redistribution should not be executed yet");
     } catch (err) {
-      console.log("Errore ricevuto:", err.message);
         assert(
             err.message.includes("redistribution should not be executed yet"),
             "Error message should contain 'redistribution should not be executed yet'"
@@ -131,7 +129,6 @@ contract("ViraGovernedToken", accounts => {
       await contract.proposeRedistribution(user2, duration, { from: operator });
       assert.fail("Already voted");
     } catch (err) {
-      console.log("Errore ricevuto:", err.message);
         assert(
             err.message.includes("Already voted"),
             "Error message should contain 'Already voted'"
@@ -148,7 +145,6 @@ contract("ViraGovernedToken", accounts => {
       await contract.proposeRedistribution(user2, duration, { from: operator2 });
       assert.fail("Second vote by same operator should fail");
     } catch (err) {
-        console.log("Errore ricevuto:", err.message);
       assert(
         err.message.includes("Second vote by same operator should fail"),
         "Expected error about 'Second vote by same operator should fail'"
@@ -157,10 +153,10 @@ contract("ViraGovernedToken", accounts => {
   });
 
   it("should allow operator to cancel expired redistribution vote", async () => {
-    // Fase 1: un operatore propone
+    // propose redistribution
     await contract.proposeRedistribution(user2, duration, { from: operator });
   
-    // Fase 2: Simula il passare di 4 giorni
+    // 4 days pass
     await web3.currentProvider.send({
       jsonrpc: "2.0",
       method: "evm_increaseTime",
@@ -175,29 +171,24 @@ contract("ViraGovernedToken", accounts => {
       id: new Date().getTime()
     }, () => {});
   
-    // Fase 3: cancella la proposta scaduta
+    //delete old proposal
     await contract.cancelRedistributionVote(user2, { from: operator });
   
     const vote = await contract.redistributionVotes(user2);
     
-    // Dopo la cancellazione, dovrebbe essere tutto a 0/default
+    // after deleting the vote, the count should be 0
     assert.equal(vote.count.toString(), "0");
     assert.equal(vote.executed, false);
     assert.equal(vote.target, "0x0000000000000000000000000000000000000000");
   });
 
   it("should NOT execute redistribution if vote expired", async () => {
-    // Proposta iniziale con un voto
     await contract.proposeRedistribution(user2, duration, { from: operator });
-  
-    // Aggiungi un secondo voto
-    await contract.proposeRedistribution(user2, duration, { from: operator2 });
-  
-    // Simula il passare di 4 giorni
+
     await web3.currentProvider.send({
       jsonrpc: "2.0",
       method: "evm_increaseTime",
-      params: [4 * 24 * 60 * 60], // 4 giorni
+      params: [4 * 24 * 60 * 60], // 4 days
       id: new Date().getTime()
     }, () => {});
   
@@ -208,12 +199,11 @@ contract("ViraGovernedToken", accounts => {
       id: new Date().getTime()
     }, () => {});
   
-    // Prova a forzare l'esecuzione dopo la scadenza
     try {
       await contract.checkAndExecuteRedistribution(user2, { from: operator });
       assert.fail("Expected revert not received");
     } catch (error) {
-      assert(error.message.includes("Vote still active") || error.message.includes("execution reverted"), "Unexpected error: " + error.message);
+      assert(error.message.includes("Vote still active") || error.message.includes("Expected revert not received"), "Unexpected error: " + error.message);
     }
   
     const vote = await contract.redistributionVotes(user2);
