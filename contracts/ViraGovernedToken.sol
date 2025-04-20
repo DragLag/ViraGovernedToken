@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract ViraGovernedToken is ERC20, Ownable {
+
+contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeable {
     mapping(address => bool) public authorizedOperators;
     mapping(address => bool) public authorizedIssuers;
     mapping(address => bool) public isBlocked;
@@ -23,7 +25,10 @@ contract ViraGovernedToken is ERC20, Ownable {
     mapping(address => Vote) public redistributionVotes;
     mapping(address => mapping(address => bool)) public hasVoted;
 
-    constructor() ERC20("ViraGovernedToken", "VGT") {
+    // ✅ initialize invece del constructor
+    function initialize() public initializer {
+        __ERC20_init("ViraGovernedToken", "VGT");
+        __Ownable_init();
         authorizedOperators[msg.sender] = true;
     }
 
@@ -33,14 +38,14 @@ contract ViraGovernedToken is ERC20, Ownable {
     }
 
     function addOperator(address operator) public onlyOwner {
-       require(!authorizedOperators[operator], "Already an operator");
+        require(!authorizedOperators[operator], "Already an operator");
         authorizedOperators[operator] = true;
-        operatorList.push(operator); 
+        operatorList.push(operator);
     }
 
     function removeOperator(address operator) public onlyOwner {
-         authorizedOperators[operator] = false;
-         for (uint256 i = 0; i < operatorList.length; i++) {
+        authorizedOperators[operator] = false;
+        for (uint256 i = 0; i < operatorList.length; i++) {
             if (operatorList[i] == operator) {
                 operatorList[i] = operatorList[operatorList.length - 1];
                 operatorList.pop();
@@ -49,7 +54,7 @@ contract ViraGovernedToken is ERC20, Ownable {
         }
     }
 
-     modifier onlyIssuer() {
+    modifier onlyIssuer() {
         require(authorizedIssuers[msg.sender], "Not authorized");
         _;
     }
@@ -63,9 +68,9 @@ contract ViraGovernedToken is ERC20, Ownable {
     }
 
     modifier onlyAuthorized() {
-    require(
-        authorizedOperators[msg.sender] || authorizedIssuers[msg.sender],
-        "Not authorized"
+        require(
+            authorizedOperators[msg.sender] || authorizedIssuers[msg.sender],
+            "Not authorized"
         );
         _;
     }
@@ -193,15 +198,15 @@ contract ViraGovernedToken is ERC20, Ownable {
     }
 
     function checkAndExecuteRedistribution(address richUser) public onlyOperator {
-    Vote storage vote = redistributionVotes[richUser];
-    require(!vote.executed, "Already executed");
+        Vote storage vote = redistributionVotes[richUser];
+        require(!vote.executed, "Already executed");
 
-    uint256 totalOperators = operatorList.length;
+        uint256 totalOperators = operatorList.length;
 
-    if (vote.count > totalOperators / 2) {
-        _executeRedistribution(richUser);
-        vote.executed = true;
-    }
+        if (vote.count > totalOperators / 2) {
+            _executeRedistribution(richUser);
+            vote.executed = true;
+        }
     }
 
     function _executeRedistribution(address richUser) internal {
@@ -240,7 +245,7 @@ contract ViraGovernedToken is ERC20, Ownable {
         }
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override{
         require(!isBlocked[from], "Sender is blocked");
         require(!isBlocked[to], "Recipient is blocked");
         super._beforeTokenTransfer(from, to, amount);
