@@ -1,13 +1,13 @@
+const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 const ViraGovernedToken = artifacts.require("ViraGovernedToken");
 
 contract("ViraGovernedToken operator", accounts => {
   const [owner, operator, user1] = accounts;
 
-  const duration = 3 * 24 * 60 * 60; // 3 giorni
   let contract;
 
   beforeEach(async () => {
-    contract = await ViraGovernedToken.new({ from: owner });
+    contract = await deployProxy(ViraGovernedToken, [], { initializer: 'initialize', from: owner });
     await contract.addOperator(operator, { from: owner });
   });
 
@@ -25,5 +25,4 @@ contract("ViraGovernedToken operator", accounts => {
     isBlocked = await contract.isBlocked(user1);
     assert.equal(isBlocked, false);
   });
-
 });
