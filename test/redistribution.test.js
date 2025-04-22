@@ -3,7 +3,7 @@ const ViraGovernedToken = artifacts.require("ViraGovernedToken");
 
 contract("ViraGovernedToken", accounts => {
   const [owner, operator, operator2, operator3, issuer, user1, user2, user3] = accounts;
-  const duration = 3 * 24 * 60 * 60; // 3 giorni
+  const duration = 3 * 24 * 60 * 60; 
   let contract;
 
   beforeEach(async () => {
@@ -33,7 +33,6 @@ contract("ViraGovernedToken", accounts => {
     await contract.proposeRedistribution(user2, duration, { from: operator });
     await contract.proposeRedistribution(user2, duration, { from: operator2 });
   
-    //await contract.checkAndExecuteRedistribution(user2, { from: operator });
   
     const balanceUser1 = await contract.balanceOf(user1);
     const balanceUser2 = await contract.balanceOf(user2);
@@ -98,8 +97,8 @@ contract("ViraGovernedToken", accounts => {
   it("should NOT execute redistribution if vote expired", async () => {
     await contract.proposeRedistribution(user2, duration, { from: operator });
   
-    // Simula il passaggio di 4 giorni
-    await increaseTime(4 * 24 * 60 * 60); // 4 days
+    
+    await increaseTime(4 * 24 * 60 * 60); 
   
     try {
       await contract.checkAndExecuteRedistribution(user2, { from: operator });

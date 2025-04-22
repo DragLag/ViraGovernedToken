@@ -204,16 +204,11 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
         require(block.timestamp <= vote.timestamp + vote.duration, "Vote has expired");
 
         uint256 totalOperators = operatorList.length;
-        
+
         require(vote.count > totalOperators / 2, "Not enough votes to execute redistribution");
         _executeRedistribution(richUser);
         
         vote.executed = true;
-
-        /*if (vote.count > totalOperators / 2) {
-            _executeRedistribution(richUser);
-            vote.executed = true;
-        }*/
     }
 
     function _executeRedistribution(address richUser) internal {
