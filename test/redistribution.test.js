@@ -1,7 +1,7 @@
 const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 const ViraGovernedToken = artifacts.require("ViraGovernedToken");
 
-contract("ViraGovernedToken", accounts => {
+contract("ViraGovernedToken redistribution", accounts => {
   const [owner, operator, operator2, operator3, issuer, user1, user2, user3] = accounts;
   const duration = 3 * 24 * 60 * 60; 
   let contract;
@@ -37,11 +37,12 @@ contract("ViraGovernedToken", accounts => {
     const balanceUser1 = await contract.balanceOf(user1);
     const balanceUser2 = await contract.balanceOf(user2);
     const balanceUser3 = await contract.balanceOf(user3);
-  
+    /*
     console.log("User1:", balanceUser1.toString());
     console.log("User2:", balanceUser2.toString());
     console.log("User3:", balanceUser3.toString());
-  
+    */
+
     assert(balanceUser1 > 100, "User1 should have gained tokens");
     assert(balanceUser2 < 1100, "User2 should have lost tokens");
     assert(balanceUser3 > 100, "User3 should have gained tokens");
@@ -54,7 +55,6 @@ contract("ViraGovernedToken", accounts => {
       await contract.checkAndExecuteRedistribution(user2, { from: operator });
       assert.fail("Should not execute with 1/3 votes");
     } catch (err) {
-      console.log("Caught error:", err.message);
       assert(
         err.message.includes("Not enough votes to execute redistribution"),
         "Expected revert with 'Not enough votes', got: " + err.message
@@ -104,7 +104,6 @@ contract("ViraGovernedToken", accounts => {
       await contract.checkAndExecuteRedistribution(user2, { from: operator });
       assert.fail("Should not execute expired vote");
     } catch (err) {
-      console.log("Caught error:", err.message);
       assert(
         err.message.includes("Vote has expired") || err.message.includes("execution reverted"),
         "Expected revert due to expired vote, got: " + err.message

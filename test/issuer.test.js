@@ -7,17 +7,15 @@ contract("ViraGovernedToken issuer", accounts => {
   let contract;
 
   beforeEach(async () => {
-    // deploy via proxy
     contract = await deployProxy(ViraGovernedToken, [], {
       initializer: 'initialize',
       from: owner
     });
 
-    // aggiungi issuer
     await contract.addIssuer(issuer, { from: owner });
   });
 
-  it("should register users and assign tokens", async () => {
+  it("should register users", async () => {
     const balance1 = await contract.balanceOf(user1);
     assert.equal(balance1.toString(), "0");
   });
