@@ -20,6 +20,11 @@
   "dependencies": {
     "@openzeppelin/contracts-upgradeable": "^4.9.5",
     "@openzeppelin/truffle-upgrades": "^1.21.0",
+    "dotenv": "^16.5.0",
     "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.24.0"
   }
 }
