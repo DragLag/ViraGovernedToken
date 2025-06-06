@@ -19,6 +19,7 @@
   "homepage": "https://github.com/DragLag/ViraGovernedToken#readme",
   "dependencies": {
     "@openzeppelin/contracts-upgradeable": "^4.9.5",
+    "@openzeppelin/hardhat-upgrades": "^3.9.0",
     "@openzeppelin/truffle-upgrades": "^1.21.0",
     "dotenv": "^16.5.0",
     "web3": "^4.16.0"

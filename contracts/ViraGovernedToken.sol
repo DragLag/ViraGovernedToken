@@ -11,8 +11,12 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
     mapping(address => bool) public authorizedIssuers;
     mapping(address => bool) public isBlocked;
     address[] public holders;
+    address[] public issuerList;
     address[] public operatorList;
     mapping(address => bool) internal isHolder;
+
+    event IssuerAdded(address indexed issuer);
+    event OperatorAdded(address indexed issuer);
 
     struct Vote {
         address target;
@@ -41,6 +45,7 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
         require(!authorizedOperators[operator], "Already an operator");
         authorizedOperators[operator] = true;
         operatorList.push(operator);
+        emit OperatorAdded(operator);
     }
 
     function removeOperator(address operator) public onlyOwner {
@@ -61,6 +66,7 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
 
     function addIssuer(address issuer) public onlyOwner {
         authorizedIssuers[issuer] = true;
+        emit IssuerAdded(issuer); 
     }
 
     function removeIssuer(address issuer) public onlyOwner {
@@ -89,6 +95,7 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
             _mint(user, uint256(amount));
         } else {
             _burn(user, uint256(-amount));
+            
         }
     }
 
