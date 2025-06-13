@@ -9,6 +9,9 @@ module.exports = {
       url: `https://polygon-amoy.infura.io/v3/${process.env.INFURA_API_KEY}`,
       accounts: [`0x${process.env.PRIVATE_KEY}`],
       chainId: 80002
+    },
+    local: {
+      url: `http://127.0.0.1:8545/`,
     }
   },
    etherscan: {
