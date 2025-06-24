@@ -5,8 +5,12 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import "./ViraStorage.sol";
+import "./ViraMetaTransactions.sol";
 
-contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeable {
+
+contract ViraGovernedToken is ViraStorage, ViraMetaTransactions {
+    /*
     mapping(address => bool) public authorizedOperators;
     mapping(address => bool) public authorizedIssuers;
     mapping(address => bool) public isBlocked;
@@ -17,7 +21,7 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
 
     event IssuerAdded(address indexed issuer);
     event OperatorAdded(address indexed issuer);
-
+    
     struct Vote {
         address target;
         uint256 count;
@@ -25,21 +29,23 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
         uint256 timestamp;
         uint256 duration;
     }
-
-    mapping(address => Vote) public redistributionVotes;
-    mapping(address => mapping(address => bool)) public hasVoted;
+    */
+    //mapping(address => Vote) public redistributionVotes;
+    //mapping(address => mapping(address => bool)) public hasVoted;
 
     // ✅ initialize invece del constructor
     function initialize() public initializer {
         __ERC20_init("ViraGovernedToken", "VGT");
         __Ownable_init();
+        __EIP712_init("ViraGovernedToken", "1");
         authorizedOperators[msg.sender] = true;
+        operatorList.push(msg.sender);
     }
 
-    modifier onlyOperator() {
-        require(authorizedOperators[msg.sender], "Not authorized");
-        _;
-    }
+    //modifier onlyOperator() {
+    //    require(authorizedOperators[msg.sender], "Not authorized");
+    //    _;
+    //}
 
     function addOperator(address operator) public onlyOwner {
         require(!authorizedOperators[operator], "Already an operator");
@@ -59,10 +65,10 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
         }
     }
 
-    modifier onlyIssuer() {
+    /*modifier onlyIssuer() {
         require(authorizedIssuers[msg.sender], "Not authorized");
         _;
-    }
+    }*/
 
     function addIssuer(address issuer) public onlyOwner {
         authorizedIssuers[issuer] = true;
@@ -73,13 +79,13 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
         authorizedIssuers[issuer] = false;
     }
 
-    modifier onlyAuthorized() {
+   /* modifier onlyAuthorized() {
         require(
             authorizedOperators[msg.sender] || authorizedIssuers[msg.sender],
             "Not authorized"
         );
         _;
-    }
+    }*/
 
     function registerUser(address user) public onlyAuthorized {
         require(balanceOf(user) == 0, "User already registered");
@@ -107,6 +113,7 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
         isBlocked[user] = false;
     }
 
+    /*
     function getPoorUsers() public view returns (address[] memory) {
         uint256 totalTokens = 0;
         uint256 numUsers = 0;
@@ -253,7 +260,7 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
             _burn(richUser, newBalance - averageBalance);
         }
     }
-
+    */
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override{
         require(!isBlocked[from], "Sender is blocked");
         require(!isBlocked[to], "Recipient is blocked");
@@ -264,4 +271,37 @@ contract ViraGovernedToken is Initializable, ERC20Upgradeable, OwnableUpgradeabl
             isHolder[to] = true;
         }
     }
+
+     // ========== INTERNAL IMPLEMENTATIONS ==========
+
+    function registerUserInternal(address sender, address user) internal override{
+        require(authorizedOperators[sender] || authorizedIssuers[sender], "Not authorized");
+        require(balanceOf(user) == 0, "User already registered");
+        if (!isHolder[user]) {
+            holders.push(user);
+            isHolder[user] = true;
+        }
+    }
+
+    
+    function blockUserInternal(address sender, address user) internal override{
+        require(authorizedOperators[sender], "Not authorized operator");
+        isBlocked[user] = true;
+    }
+
+    function unblockUserInternal(address sender, address user) internal override{
+        require(authorizedOperators[sender], "Not authorized operator");
+        isBlocked[user] = false;
+    }
+
+    function adjustBalanceInternal(address sender, address user, int256 amount) internal override{
+        require(authorizedIssuers[sender], "Not authorized issuer");
+        require(!isBlocked[user], "User is blocked");
+        if (amount > 0) {
+            _mint(user, uint256(amount));
+        } else {
+            _burn(user, uint256(-amount));
+        }
+    }
+
 }
