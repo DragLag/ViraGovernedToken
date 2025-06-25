@@ -6,9 +6,11 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "./ViraUserManagement.sol";
+import "./ViraAuthorization.sol";
+import "./ViraMetaTransactions.sol";
 
 
-contract ViraGovernedToken is  ViraUserManagement {
+contract ViraGovernedToken is ViraUserManagement, ViraAuthorization, ViraMetaTransactions {
    
     // ✅ initialize invece del constructor
     function initialize() public initializer {
@@ -19,70 +21,52 @@ contract ViraGovernedToken is  ViraUserManagement {
         operatorList.push(msg.sender);
     }
 
-
-    function addOperator(address operator) public onlyOwner {
-        require(!authorizedOperators[operator], "Already an operator");
-        authorizedOperators[operator] = true;
-        operatorList.push(operator);
-        emit OperatorAdded(operator);
+    /**
+     * @dev Override _beforeTokenTransfer to handle multiple inheritance
+     */
+    function _beforeTokenTransfer(
+        address from, 
+        address to, 
+        uint256 amount
+    ) internal override(ERC20Upgradeable, ViraUserManagement) {
+        ViraUserManagement._beforeTokenTransfer(from, to, amount);
     }
 
-    function removeOperator(address operator) public onlyOwner {
-        authorizedOperators[operator] = false;
-        for (uint256 i = 0; i < operatorList.length; i++) {
-            if (operatorList[i] == operator) {
-                operatorList[i] = operatorList[operatorList.length - 1];
-                operatorList.pop();
-                break;
-            }
-        }
-    }
 
-    function addIssuer(address issuer) public onlyOwner {
-        authorizedIssuers[issuer] = true;
-        emit IssuerAdded(issuer); 
-    }
-
-    function removeIssuer(address issuer) public onlyOwner {
-        authorizedIssuers[issuer] = false;
-    }
-
-   
 
     
-
-   
-
-  /*
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override{
-        require(!isBlocked[from], "Sender is blocked");
-        require(!isBlocked[to], "Recipient is blocked");
-        super._beforeTokenTransfer(from, to, amount);
-
-        if (!isHolder[to]) {
-            holders.push(to);
-            isHolder[to] = true;
-        }
-    }
-*/
      // ========== INTERNAL IMPLEMENTATIONS ==========
     
-    function registerUserInternal(address sender, address user) internal override{
+    /*function registerUserInternal(address sender, address user) internal override{
         require(authorizedOperators[sender] || authorizedIssuers[sender], "Not authorized");
         require(balanceOf(user) == 0, "User already registered");
         if (!isHolder[user]) {
             holders.push(user);
             isHolder[user] = true;
         }
-    }
+    }*/
+     // User management
+    function registerUser(address user) external;
+    function blockUser(address user) external;
+    function unblockUser(address user) external;
+    function adjustBalance(address user, int256 amount) external;
 
-    
-    function blockUserInternal(address sender, address user) internal override{
+    // Authorization functions
+    function addOperator(address operator) external;
+    function removeOperator(address operator) external;
+    function addIssuer(address issuer) external;
+    function removeIssuer(address issuer) external;
+    function addRelayer(address relayer) external;
+    function removeRelayer(address relayer) external;
+
+
+    /*
+    function blockUserInternal(address sender, address user) internal {
         require(authorizedOperators[sender], "Not authorized operator");
         isBlocked[user] = true;
     }
 
-    function unblockUserInternal(address sender, address user) internal override{
+    function unblockUserInternal(address sender, address user) internal{
         require(authorizedOperators[sender], "Not authorized operator");
         isBlocked[user] = false;
     }
@@ -96,5 +80,7 @@ contract ViraGovernedToken is  ViraUserManagement {
             _burn(user, uint256(-amount));
         }
     }
+    */
+    
 
 }

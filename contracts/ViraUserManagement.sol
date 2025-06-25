@@ -7,7 +7,7 @@ import "./ViraMetaTransactions.sol";
  * @title ViraUserManagement
  * @dev Handles user registration, blocking, and balance adjustments
  */
-abstract contract ViraUserManagement is ViraStorage, ViraMetaTransactions {
+abstract contract ViraUserManagement is ViraStorage {
     
     // ========== USER REGISTRATION ==========
     
@@ -15,7 +15,7 @@ abstract contract ViraUserManagement is ViraStorage, ViraMetaTransactions {
         registerUserInternal(msg.sender, user);
     }
 
-    function registerUserInternal(address sender, address user) internal virtual override{
+    function registerUserInternal(address sender, address user) internal {
         require(authorizedOperators[sender] || authorizedIssuers[sender], "Not authorized");
         require(balanceOf(user) == 0, "User already registered");
         if (!isHolder[user]) {
@@ -30,7 +30,7 @@ abstract contract ViraUserManagement is ViraStorage, ViraMetaTransactions {
         blockUserInternal(msg.sender, user);
     }
 
-    function blockUserInternal(address sender, address user) internal virtual override{
+    function blockUserInternal(address sender, address user) internal{
         require(authorizedOperators[sender], "Not authorized operator");
         isBlocked[user] = true;
     }
@@ -39,7 +39,7 @@ abstract contract ViraUserManagement is ViraStorage, ViraMetaTransactions {
         unblockUserInternal(msg.sender, user);
     }
 
-    function unblockUserInternal(address sender, address user) internal virtual override {
+    function unblockUserInternal(address sender, address user) internal{
         require(authorizedOperators[sender], "Not authorized operator");
         isBlocked[user] = false;
     }
@@ -50,7 +50,7 @@ abstract contract ViraUserManagement is ViraStorage, ViraMetaTransactions {
         adjustBalanceInternal(msg.sender, user, amount);
     }
 
-    function adjustBalanceInternal(address sender, address user, int256 amount) internal virtual override {
+    function adjustBalanceInternal(address sender, address user, int256 amount) internal {
         require(authorizedIssuers[sender], "Not authorized issuer");
         require(!isBlocked[user], "User is blocked");
         if (amount > 0) {
@@ -62,7 +62,7 @@ abstract contract ViraUserManagement is ViraStorage, ViraMetaTransactions {
 
     // ========== TOKEN TRANSFER OVERRIDE ==========
     
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         require(!isBlocked[from], "Sender is blocked");
         require(!isBlocked[to], "Recipient is blocked");
         super._beforeTokenTransfer(from, to, amount);
