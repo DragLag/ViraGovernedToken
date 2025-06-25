@@ -25,18 +25,6 @@ abstract contract ViraStorage is Initializable, ERC20Upgradeable, OwnableUpgrade
     address[] public relayerList;
     mapping(address => bool) internal isHolder;
 
-    // Voting system
-    /*struct Vote {
-        address target;
-        uint256 count;
-        bool executed;
-        uint256 timestamp;
-        uint256 duration;
-    }*/
-
-    //mapping(address => Vote) public redistributionVotes;
-    //mapping(address => mapping(address => bool)) public hasVoted;
-
     // Meta-transactions
     struct MetaTransaction {
         uint256 nonce;
