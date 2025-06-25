@@ -5,11 +5,10 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import "./ViraStorage.sol";
-import "./ViraMetaTransactions.sol";
+import "./ViraUserManagement.sol";
 
 
-contract ViraGovernedToken is ViraStorage, ViraMetaTransactions {
+contract ViraGovernedToken is  ViraUserManagement {
    
     // ✅ initialize invece del constructor
     function initialize() public initializer {
@@ -48,33 +47,13 @@ contract ViraGovernedToken is ViraStorage, ViraMetaTransactions {
         authorizedIssuers[issuer] = false;
     }
 
-    function registerUser(address user) public onlyAuthorized {
-        require(balanceOf(user) == 0, "User already registered");
-        if (!isHolder[user]) {
-            holders.push(user);
-            isHolder[user] = true;
-        }
-    }
+   
 
-    function adjustBalance(address user, int256 amount) public onlyIssuer {
-        require(!isBlocked[user], "User is blocked");
-        if (amount > 0) {
-            _mint(user, uint256(amount));
-        } else {
-            _burn(user, uint256(-amount));
-            
-        }
-    }
+    
 
-    function blockUser(address user) public onlyOperator {
-        isBlocked[user] = true;
-    }
+   
 
-    function unblockUser(address user) public onlyOperator {
-        isBlocked[user] = false;
-    }
-
-  
+  /*
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override{
         require(!isBlocked[from], "Sender is blocked");
         require(!isBlocked[to], "Recipient is blocked");
@@ -85,9 +64,9 @@ contract ViraGovernedToken is ViraStorage, ViraMetaTransactions {
             isHolder[to] = true;
         }
     }
-
+*/
      // ========== INTERNAL IMPLEMENTATIONS ==========
-
+    
     function registerUserInternal(address sender, address user) internal override{
         require(authorizedOperators[sender] || authorizedIssuers[sender], "Not authorized");
         require(balanceOf(user) == 0, "User already registered");
