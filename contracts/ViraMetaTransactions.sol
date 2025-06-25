@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./ViraStorage.sol";
 
 /**
@@ -134,13 +135,54 @@ abstract contract ViraMetaTransactions is ViraStorage {
     }
 
     
+    // ========== USER REGISTRATION ==========
+    
+    function registerUser(address user) public onlyAuthorized {
+        registerUserInternal(msg.sender, user);
+    }
+    
+    function registerUserInternal(address sender, address user) internal {
+        require(authorizedOperators[sender] || authorizedIssuers[sender], "Not authorized");
+        require(balanceOf(user) == 0, "User already registered");
+        if (!isHolder[user]) {
+            holders.push(user);
+            isHolder[user] = true;
+        }
+    }
 
-    // ========== INTERNAL FUNCTION DECLARATIONS ==========
-    // These must be implemented by the main contract
+     // ========== USER BLOCKING ==========
     
-    function registerUserInternal(address sender, address user) internal virtual;
-    function blockUserInternal(address sender, address user) internal virtual;
-    function unblockUserInternal(address sender, address user) internal virtual;
-    function adjustBalanceInternal(address sender, address user, int256 amount) internal virtual;
+    function blockUser(address user) public onlyOperator {
+        blockUserInternal(msg.sender, user);
+    }
+
+    function blockUserInternal(address sender, address user) internal {
+        require(authorizedOperators[sender], "Not authorized operator");
+        isBlocked[user] = true;
+    }
+
+    function unblockUser(address user) public onlyOperator {
+        unblockUserInternal(msg.sender, user);
+    }
+
+    function unblockUserInternal(address sender, address user) internal {
+        require(authorizedOperators[sender], "Not authorized operator");
+        isBlocked[user] = false;
+    }
+
+   // ========== BALANCE MANAGEMENT ==========
     
+    function adjustBalance(address user, int256 amount) public onlyIssuer {
+        adjustBalanceInternal(msg.sender, user, amount);
+    }
+
+    function adjustBalanceInternal(address sender, address user, int256 amount) internal{
+        require(authorizedIssuers[sender], "Not authorized issuer");
+        require(!isBlocked[user], "User is blocked");
+        if (amount > 0) {
+            _mint(user, uint256(amount));
+        } else {
+            _burn(user, uint256(-amount));
+        }
+    }
 }

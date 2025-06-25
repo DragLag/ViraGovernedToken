@@ -11,7 +11,7 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgra
  * @dev Storage contract containing all state variables and events
  */
 abstract contract ViraStorage is Initializable, ERC20Upgradeable, OwnableUpgradeable, EIP712Upgradeable {
-    // Authorization mappings
+    
     mapping(address => bool) public authorizedOperators;
     mapping(address => bool) public authorizedIssuers;
     mapping(address => bool) public authorizedRelayers;

@@ -4,13 +4,14 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
 
-import "./ViraUserManagement.sol";
+
 import "./ViraAuthorization.sol";
 import "./ViraMetaTransactions.sol";
 
 
-contract ViraGovernedToken is ViraUserManagement, ViraAuthorization, ViraMetaTransactions {
+contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthorization, ViraMetaTransactions {
    
     // ✅ initialize invece del constructor
     function initialize() public initializer {
@@ -21,66 +22,44 @@ contract ViraGovernedToken is ViraUserManagement, ViraAuthorization, ViraMetaTra
         operatorList.push(msg.sender);
     }
 
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable) {
+        require(!isBlocked[from], "Sender is blocked");
+        require(!isBlocked[to], "Recipient is blocked");
+        super._beforeTokenTransfer(from, to, amount);
+
+        if (to != address(0) && !isHolder[to]) {
+            holders.push(to);
+            isHolder[to] = true;
+        }
+        }
+
     /**
-     * @dev Override _beforeTokenTransfer to handle multiple inheritance
+     * @dev Returns the name of the token
      */
-    function _beforeTokenTransfer(
-        address from, 
-        address to, 
-        uint256 amount
-    ) internal override(ERC20Upgradeable, ViraUserManagement) {
-        ViraUserManagement._beforeTokenTransfer(from, to, amount);
+    function name() public view virtual override(ERC20Upgradeable) returns (string memory) {
+        return ERC20Upgradeable.name();
+    }
+
+    /**
+     * @dev Returns the symbol of the token
+     */
+    function symbol() public view virtual override(ERC20Upgradeable) returns (string memory) {
+        return ERC20Upgradeable.symbol();
     }
 
 
-
-    
-     // ========== INTERNAL IMPLEMENTATIONS ==========
-    
-    /*function registerUserInternal(address sender, address user) internal override{
-        require(authorizedOperators[sender] || authorizedIssuers[sender], "Not authorized");
-        require(balanceOf(user) == 0, "User already registered");
-        if (!isHolder[user]) {
-            holders.push(user);
-            isHolder[user] = true;
-        }
-    }*/
-     // User management
-    function registerUser(address user) external;
-    function blockUser(address user) external;
-    function unblockUser(address user) external;
-    function adjustBalance(address user, int256 amount) external;
-
-    // Authorization functions
-    function addOperator(address operator) external;
-    function removeOperator(address operator) external;
-    function addIssuer(address issuer) external;
-    function removeIssuer(address issuer) external;
-    function addRelayer(address relayer) external;
-    function removeRelayer(address relayer) external;
-
-
-    /*
-    function blockUserInternal(address sender, address user) internal {
-        require(authorizedOperators[sender], "Not authorized operator");
-        isBlocked[user] = true;
+    /**
+     * @dev Returns the total amount of tokens
+     */
+    function totalSupply() public view virtual override(ERC20Upgradeable) returns (uint256) {
+        return ERC20Upgradeable.totalSupply();
     }
 
-    function unblockUserInternal(address sender, address user) internal{
-        require(authorizedOperators[sender], "Not authorized operator");
-        isBlocked[user] = false;
+    /**
+     * @dev Moves amount tokens from the caller's account to to
+     */
+    function transfer(address to, uint256 amount) public virtual override(ERC20Upgradeable) returns (bool) {
+        return ERC20Upgradeable.transfer(to, amount);
     }
-
-    function adjustBalanceInternal(address sender, address user, int256 amount) internal override{
-        require(authorizedIssuers[sender], "Not authorized issuer");
-        require(!isBlocked[user], "User is blocked");
-        if (amount > 0) {
-            _mint(user, uint256(amount));
-        } else {
-            _burn(user, uint256(-amount));
-        }
-    }
-    */
-    
 
 }
