@@ -80,10 +80,6 @@ abstract contract ViraMetaTransactions is ViraStorage {
             address user = abi.decode(skipFirst4Bytes(functionCall), (address));
             registerUserInternal(userAddress, user);
             return "";
-        } else if (selector == this.proposeRedistributionMeta.selector) {
-            (address richUser, uint256 duration) = abi.decode(skipFirst4Bytes(functionCall), (address, uint256));
-            proposeRedistributionInternal(userAddress, richUser, duration);
-            return "";
         } else if (selector == this.blockUserMeta.selector) {
             address user = abi.decode(skipFirst4Bytes(functionCall), (address));
             blockUserInternal(userAddress, user);
@@ -95,10 +91,6 @@ abstract contract ViraMetaTransactions is ViraStorage {
         } else if (selector == this.adjustBalanceMeta.selector) {
             (address user, int256 amount) = abi.decode(skipFirst4Bytes(functionCall), (address, int256));
             adjustBalanceInternal(userAddress, user, amount);
-            return "";
-        } else if (selector == this.checkAndExecuteRedistributionMeta.selector) {
-            address richUser = abi.decode(skipFirst4Bytes(functionCall), (address));
-            checkAndExecuteRedistributionInternal(userAddress, richUser);
             return "";
         } else if (selector == this.transferMeta.selector) {
             (address to, uint256 amount) = abi.decode(skipFirst4Bytes(functionCall), (address, uint256));
@@ -123,9 +115,7 @@ abstract contract ViraMetaTransactions is ViraStorage {
         revert("Use executeMetaTransaction");
     }
 
-    function proposeRedistributionMeta(address richUser, uint256 duration) public pure {
-        revert("Use executeMetaTransaction");
-    }
+   
 
     function blockUserMeta(address user) public pure {
         revert("Use executeMetaTransaction");
@@ -143,9 +133,7 @@ abstract contract ViraMetaTransactions is ViraStorage {
         revert("Use executeMetaTransaction");
     }
 
-    function checkAndExecuteRedistributionMeta(address richUser) public pure {
-        revert("Use executeMetaTransaction");
-    }
+    
 
     // ========== INTERNAL FUNCTION DECLARATIONS ==========
     // These must be implemented by the main contract
