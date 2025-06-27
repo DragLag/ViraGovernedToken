@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/draft-EIP712Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 
 
 import "./ViraAuthorization.sol";
@@ -13,19 +13,18 @@ import "./ViraMetaTransactions.sol";
 
 contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthorization, ViraMetaTransactions {
    
-    // ✅ initialize invece del constructor
     function initialize() public initializer {
         __ERC20_init("ViraGovernedToken", "VGT");
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __EIP712_init("ViraGovernedToken", "1");
         authorizedOperators[msg.sender] = true;
         operatorList.push(msg.sender);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable) {
+    function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable) {
         require(!isBlocked[from], "Sender is blocked");
         require(!isBlocked[to], "Recipient is blocked");
-        super._beforeTokenTransfer(from, to, amount);
+        super._update(from, to, amount);
 
         if (to != address(0) && !isHolder[to]) {
             holders.push(to);

@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
+const { utils } = require("ethers");
 
 describe("ViraGovernedToken issuer", function () {
   let contract;
@@ -14,7 +15,9 @@ describe("ViraGovernedToken issuer", function () {
     contract = await upgrades.deployProxy(ViraGovernedToken, [], {
       initializer: 'initialize'
     });
+    // Wait until deployment completes
     await contract.waitForDeployment();
+
 
     // Add issuer
     await contract.connect(owner).addIssuer(issuer.address);

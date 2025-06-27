@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+//import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./ViraStorage.sol";
 
@@ -10,7 +12,7 @@ import "./ViraStorage.sol";
  * @dev Handles meta-transaction functionality
  */
 abstract contract ViraMetaTransactions is ViraStorage {
-    using ECDSAUpgradeable for bytes32;
+    using ECDSA for bytes32;
 
     // ========== META-TRANSACTION EXECUTION ==========
 
