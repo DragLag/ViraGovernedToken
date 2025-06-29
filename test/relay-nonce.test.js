@@ -1,38 +1,10 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
+const { N } = require("ethers");
 
 
-async function createSignedMetaTransaction(signer, functionCall, token, domain) {
-    const nonce = await token.getNonce(signer.address);
-    console.log("nonce: "+ nonce + " for signer: " + signer.address + " functionCall: " + functionCall);  ;
-    
-    const types = {
-        MetaTransaction: [
-            { name: 'nonce', type: 'uint256' },
-            { name: 'from', type: 'address' },
-            { name: 'functionCall', type: 'bytes' }
-        ]
-    };
 
-    const values = {
-        nonce: nonce,
-        from: signer.address,
-        functionCall: functionCall
-    };
-    
-    const signature = await signer._signTypedData(domain, types, values);
-    console.log("signature: " + signature);
-    
-    const { r, s, v } = ethers.utils.splitSignature(signature);
-
-    return {
-        userAddress: signer.address,
-        nonce: nonce,
-        signature: { r, s, v },
-        functionCall: functionCall
-    };
-}
 
 // ...describe("ViraGovernedToken - Relayer Meta-Transactions", function () { ... })
 
@@ -61,8 +33,10 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
         domain = {
             name: "ViraGovernedToken",
             version: "1",
-            chainId: chainId,
-            verifyingContract: token.address
+            //chainId: chainId,
+            chainId: (await ethers.provider.getNetwork()).chainId,
+            //verifyingContract: token.address
+            verifyingContract: token.target
         };
 
         // Setup initial roles
@@ -99,21 +73,22 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
 
         it("Should increment nonce after meta-transaction", async function () {
             const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
+            console.log("functionCall: ", functionCall);
             
             
             const metaTx = await createSignedMetaTransaction(relayer2, functionCall, token, domain);
             console.log("metaTx: ", metaTx);
-            
             await token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                await operator1.getAddress(),  // userAddress
+                functionCall,                  // functionCall
                 metaTx.signature.r,
                 metaTx.signature.s,
-                metaTx.signature.v
+                metaTx.signature.v                      // v (from splitSignature)
             );
-            const nonce= await token.getNonce(operator1.address);
+
+            const nonce = await token.getNonce(await operator1.getAddress());
             console.log("new nonce:", nonce.toString());
-            expect(await token.getNonce(operator1.address)).to.equal(1);
+            expect(nonce).to.equal(1);
         });
     });
     /*
@@ -306,149 +281,39 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
                 .to.be.revertedWith("Use executeMetaTransaction");
         });
     });
-
-    // Helper function to create signed meta-transactions
-    async function createSignedMetaTransaction(signer, functionCall) {
-        const nonce = await token.getNonce(signer.address);
-        
-        const types = {
-            MetaTransaction: [
-                { name: 'nonce', type: 'uint256' },
-                { name: 'from', type: 'address' },
-                { name: 'functionCall', type: 'bytes' }
-            ]
-        };
-
-        const values = {
-            nonce: nonce,
-            from: signer.address,
-            functionCall: functionCall
-        };
-
-        const signature = await signer._signTypedData(domain, types, values);
-        const { r, s, v } = ethers.utils.splitSignature(signature);
-
-        return {
-            userAddress: signer.address,
-            nonce: nonce,
-            signature: { r, s, v },
-            functionCall: functionCall
-        };
-    }
-});
-
-// Integration Tests per il Relayer Service
-describe("Relayer Service Integration", function () {
-    let token;
-    let relayer;
-    let operator;
-    let issuer;
-    let user;
-
-    beforeEach(async function () {
-        [owner, relayer, operator, issuer, user] = await ethers.getSigners();
-        
-        const ViraGovernedToken = await ethers.getContractFactory("ViraGovernedToken");
-        token = await upgrades.deployProxy(ViraGovernedToken, [], {
-            initializer: "initialize",
-        });
-        await token.deployed();
-
-        await token.addRelayer(relayer.address);
-        await token.addOperator(operator.address);
-        await token.addIssuer(issuer.address);
-    });
-
-    describe("Relayer Service Simulation", function () {
-        it("Should simulate complete relayer workflow", async function () {
-            // Simulate what the relayer service would do
-            
-            // 1. Get nonce
-            const nonce = await token.getNonce(operator.address);
-            expect(nonce).to.equal(0);
-
-            // 2. Create function call
-            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user.address]);
-
-            // 3. Sign meta-transaction
-            const chainId = await ethers.provider.getNetwork().then(n => n.chainId);
-            const domain = {
-                name: "ViraGovernedToken",
-                version: "1",
-                chainId: chainId,
-                verifyingContract: token.address
-            };
-
-            const types = {
-                MetaTransaction: [
-                    { name: 'nonce', type: 'uint256' },
-                    { name: 'from', type: 'address' },
-                    { name: 'functionCall', type: 'bytes' }
-                ]
-            };
-
-            const values = {
-                nonce: nonce,
-                from: operator.address,
-                functionCall: functionCall
-            };
-
-            const signature = await operator._signTypedData(domain, types, values);
-            const { r, s, v } = ethers.utils.splitSignature(signature);
-
-            // 4. Execute via relayer
-            await expect(token.connect(relayer).executeMetaTransaction(
-                operator.address,
-                functionCall,
-                r, s, v
-            )).to.emit(token, "MetaTransactionExecuted");
-
-            // 5. Verify state changes
-            expect(await token.getNonce(operator.address)).to.equal(1);
-        });
-
-        it("Should handle multiple sequential meta-transactions", async function () {
-            const users = [user, await ethers.getSigner()];
-            
-            for (let i = 0; i < users.length; i++) {
-                const nonce = await token.getNonce(operator.address);
-                const functionCall = token.interface.encodeFunctionData("registerUserMeta", [users[i].address]);
-                
-                const chainId = await ethers.provider.getNetwork().then(n => n.chainId);
-                const domain = {
-                    name: "ViraGovernedToken",
-                    version: "1",
-                    chainId: chainId,
-                    verifyingContract: token.address
-                };
-
-                const types = {
-                    MetaTransaction: [
-                        { name: 'nonce', type: 'uint256' },
-                        { name: 'from', type: 'address' },
-                        { name: 'functionCall', type: 'bytes' }
-                    ]
-                };
-
-                const values = {
-                    nonce: nonce,
-                    from: operator.address,
-                    functionCall: functionCall
-                };
-
-                const signature = await operator._signTypedData(domain, types, values);
-                const { r, s, v } = ethers.utils.splitSignature(signature);
-
-                await token.connect(relayer).executeMetaTransaction(
-                    operator.address,
-                    functionCall,
-                    r, s, v
-                );
-
-                expect(await token.getNonce(operator.address)).to.equal(i + 1);
-            }
-        });
-    });
-
     */
+    // Helper function to create signed meta-transactions
+   async function createSignedMetaTransaction(signer, functionCall, token, domain) {
+    const nonce = await token.getNonce(signer.address);
+    const signerAddress = await signer.getAddress();
+    console.log("nonce:", nonce.toString(), "for signer:", signerAddress, "functionCall:", functionCall);    
+
+    const types = {
+        MetaTransaction: [
+            { name: 'nonce', type: 'uint256' },
+            { name: 'from', type: 'address' },
+            { name: 'functionCall', type: 'bytes' }
+        ]
+    };
+
+    const values = {
+        nonce: nonce,
+        from: signer.address,
+        functionCall: functionCall
+    };
+    
+    const signature = await signer.signTypedData(domain, types, values);
+    //console.log("signature: " + signature);
+    
+    
+    const { r, s, p, v } = ethers.Signature.from(signature);// splitSignature(signature);
+    return {
+        userAddress: signer.address,
+        nonce: nonce,
+        signature: { r, s, p, v },
+        functionCall: functionCall
+    };
+    
+}
 });
+

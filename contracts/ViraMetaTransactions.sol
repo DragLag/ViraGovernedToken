@@ -51,7 +51,7 @@ abstract contract ViraMetaTransactions is ViraStorage {
         bytes32 sigR,
         bytes32 sigS,
         uint8 sigV
-    ) internal view returns (bool) {
+    ) internal returns (bool) {
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(
@@ -62,6 +62,7 @@ abstract contract ViraMetaTransactions is ViraStorage {
                 )
             )
         );
+        emit DebugDigest(digest);
         
         address recoveredAddress = digest.recover(abi.encodePacked(sigR, sigS, sigV));
         return recoveredAddress == user;

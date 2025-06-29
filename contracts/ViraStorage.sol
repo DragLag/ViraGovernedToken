@@ -42,6 +42,7 @@ abstract contract ViraStorage is Initializable, ERC20Upgradeable, OwnableUpgrade
     event OperatorAdded(address indexed operator);
     event RelayerAdded(address indexed relayer);
     event MetaTransactionExecuted(address indexed user, address indexed relayer, bytes4 functionSelector);
+    event DebugDigest(bytes32 digest);
 
     // Modifiers
     modifier onlyOperator() {
