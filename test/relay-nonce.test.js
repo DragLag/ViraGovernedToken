@@ -85,45 +85,61 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             expect(nonce).to.equal(1);
         });
     });
-   
+
     describe("Meta-Transaction Signature Verification", function () {
+         it("JS digest and Sol digest are the same ", async function () {
+            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
+            const jsDigest = await getJsDigest(operator1, functionCall, token, domain);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
+            await token.connect(relayer1).executeMetaTransaction(
+                await operator1.getAddress(),  // userAddress
+                functionCall,                  // functionCall
+                metaTx.signature.r,
+                metaTx.signature.s,
+                metaTx.signature.v             // v (from splitSignature)
+            );
+            const digetsSol = await token.debugDigest();
+            console.log("digest from solidity:", digetsSol);
+            expect(digetsSol).to.equal(jsDigest);
+        });
+
         it("Should verify valid signature", async function () {
-            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             // This should not revert
             await expect(token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                 await operator1.getAddress(),  
+                functionCall,                
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
             )).to.not.be.reverted;
             });
         });
-        /*
+        
         it("Should reject invalid signature", async function () {
-            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             // Use wrong signature
             await expect(token.connect(relayer1).executeMetaTransaction(
-                user2.address, // Wrong user address
-                metaTx.functionCall,
+                await user2.getAddress(), // Wrong user address
+                functionCall, 
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
             )).to.be.revertedWith("Invalid signature");
         });
-
+        
         it("Should reject replay attacks", async function () {
-            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             // Execute first time
             await token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                 await operator1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
@@ -131,54 +147,54 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
 
             // Try to replay - should fail
             await expect(token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                await operator1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
             )).to.be.revertedWith("Invalid signature");
         });
-    });
 
+      
     describe("Meta-Transaction Authorization", function () {
         it("Should only allow authorized relayers", async function () {
-            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             await expect(token.connect(user1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+               await operator1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
             )).to.be.revertedWith("Not authorized relayer");
         });
+    
     });
-
     describe("Meta-Transaction Function Execution", function () {
         it("Should execute registerUserMeta", async function () {
-            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             await expect(token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                 await operator1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
             )).to.emit(token, "MetaTransactionExecuted")
-              .withArgs(operator1.address, relayer1.address, "0x9d4323be"); // registerUserMeta selector
+              .withArgs(operator1.address, relayer1.address, "0xcaa8e180"); // registerUserMeta selector
         });
 
        
 
         it("Should execute blockUserMeta", async function () {
             const functionCall = token.interface.encodeFunctionData("blockUserMeta", [user3.address]);
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             await token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                 await operator1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
@@ -192,11 +208,11 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             await token.connect(operator1).blockUser(user3.address);
             
             const functionCall = token.interface.encodeFunctionData("unblockUserMeta", [user3.address]);
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             await token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                 await operator1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
@@ -208,31 +224,31 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
         it("Should execute adjustBalanceMeta", async function () {
             const amount = 100;
             const functionCall = token.interface.encodeFunctionData("adjustBalanceMeta", [user3.address, amount]);
-            const metaTx = await createSignedMetaTransaction(issuer1, functionCall);
+            const metaTx = await createSignedMetaTransaction(issuer1, functionCall, token, domain);
             
             const balanceBefore = await token.balanceOf(user3.address);
             
             await token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                 await issuer1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
             );
 
             const balanceAfter = await token.balanceOf(user3.address);
-            expect(balanceAfter).to.equal(balanceBefore.add(amount));
+            expect(balanceAfter).to.equal(Number(balanceBefore) + amount);
         });
     });
-
+    
     describe("Meta-Transaction Access Control", function () {
         it("Should enforce operator role for operator functions", async function () {
             const functionCall = token.interface.encodeFunctionData("blockUserMeta", [user3.address]);
-            const metaTx = await createSignedMetaTransaction(user1, functionCall); // user1 is not operator
+            const metaTx = await createSignedMetaTransaction(user1, functionCall, token, domain); // user1 is not operator
             
             await expect(token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                await user1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
@@ -241,11 +257,11 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
 
         it("Should enforce issuer role for issuer functions", async function () {
             const functionCall = token.interface.encodeFunctionData("adjustBalanceMeta", [user3.address, 100]);
-            const metaTx = await createSignedMetaTransaction(user1, functionCall); // user1 is not issuer
+            const metaTx = await createSignedMetaTransaction(user1, functionCall, token, domain); // user1 is not issuer
             
             await expect(token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                await user1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
@@ -257,11 +273,11 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
         it("Should revert for unsupported function selectors", async function () {
             // Create a function call with an unsupported selector
             const functionCall = "0x12345678"; // Invalid selector
-            const metaTx = await createSignedMetaTransaction(operator1, functionCall);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             
             await expect(token.connect(relayer1).executeMetaTransaction(
-                metaTx.userAddress,
-                metaTx.functionCall,
+                await operator1.getAddress(),
+                functionCall,
                 metaTx.signature.r,
                 metaTx.signature.s,
                 metaTx.signature.v
@@ -276,7 +292,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
                 .to.be.revertedWith("Use executeMetaTransaction");
         });
     });
-    */
+    
     // Helper function to create signed meta-transactions
    async function createSignedMetaTransaction(signer, functionCall, token, domain) {
     const nonce = await token.getNonce(signer.address);
@@ -310,6 +326,29 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
     
 }
 
+async function getJsDigest(signer, functionCall, tokenContract, domain) {
+    const signerAddress = await signer.getAddress();
+    const nonce = await tokenContract.getNonce(signerAddress);
+    
+    const metaTx = {
+        nonce: nonce,
+        from: signerAddress,
+        functionCall: functionCall
+    };
+    
+    const types = {
+        MetaTransaction: [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "functionCall", type: "bytes" }
+        ]
+    };
+    
+    const digest = ethers.TypedDataEncoder.hash(domain, types, metaTx);
+    return digest
+}
+
+
 async function debugSignature(signer, functionCall, tokenContract, domain) {
     const signerAddress = await signer.getAddress();
     const nonce = await tokenContract.getNonce(signerAddress);
@@ -338,7 +377,6 @@ async function debugSignature(signer, functionCall, tokenContract, domain) {
     
     console.log("Types:", types);
     
-    // Calcola il digest che dovrebbe essere usato
     const digest = ethers.TypedDataEncoder.hash(domain, types, metaTx);
     console.log("Expected digest:", digest);
     
@@ -352,5 +390,6 @@ async function debugSignature(signer, functionCall, tokenContract, domain) {
     
     return { metaTx, signature: { r, s, v } };
 }
-});
 
+
+});
