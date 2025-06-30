@@ -19,7 +19,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
     let domain;
 
     beforeEach(async function () {
-        [owner, relayer1, relayer2, operator1, operator2, issuer1, user1, user2, user3] = await ethers.getSigners();
+        [owner, relayer1, relayer2, operator1, operator2, issuer1, user1, user2, user3, user4] = await ethers.getSigners();
         
         // Deploy contract
         ViraGovernedToken = await ethers.getContractFactory("ViraGovernedToken");
@@ -27,6 +27,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             initializer: "initialize",
         });
         await token.waitForDeployment();
+        
 
         // Setup domain for EIP-712
         const chainId = await ethers.provider.getNetwork().then(n => n.chainId);
@@ -36,14 +37,14 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             //chainId: chainId,
             chainId: (await ethers.provider.getNetwork()).chainId,
             //verifyingContract: token.address
-            verifyingContract: token.target
+            verifyingContract: await token.getAddress()
         };
-
+        //console.log("Domain for EIP-712:", domain);
         // Setup initial roles
         await token.addRelayer(relayer1.address);
         await token.addRelayer(relayer2.address);
         //await token.addOperator(operator1.address);
-        await token.addOperator(operator2.address);
+        await token.addOperator(operator1.address);
         await token.addIssuer(issuer1.address);
 
         // Mint some tokens for testing
@@ -64,34 +65,27 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             //console.log("signers: "+ signers.map(signer => signer.address).join(", "));
             expect(signers.map(signer => signer.address)).to.include(operator1.address);
         });
-
-        it("Check _signTypedData available on operator1", async function () {
-            console.log("operator1 type:", typeof operator1);
-            console.log("operator1._signTypedData:", typeof operator1._signTypedData);
-            console.log("operator1.signMessage:", typeof operator1.signMessage);
-        });
+      
 
         it("Should increment nonce after meta-transaction", async function () {
-            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
-            console.log("functionCall: ", functionCall);
-            
-            
-            const metaTx = await createSignedMetaTransaction(relayer2, functionCall, token, domain);
-            console.log("metaTx: ", metaTx);
+            const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
+            //const metaTxDbg = await debugSignature(operator1, functionCall, token, domain);
+            const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
             await token.connect(relayer1).executeMetaTransaction(
                 await operator1.getAddress(),  // userAddress
                 functionCall,                  // functionCall
                 metaTx.signature.r,
                 metaTx.signature.s,
-                metaTx.signature.v                      // v (from splitSignature)
+                metaTx.signature.v             // v (from splitSignature)
             );
-
+            const digetsSol = await token.debugDigest();
+            console.log("digest from solidity:", digetsSol);
             const nonce = await token.getNonce(await operator1.getAddress());
             console.log("new nonce:", nonce.toString());
             expect(nonce).to.equal(1);
         });
     });
-    /*
+   
     describe("Meta-Transaction Signature Verification", function () {
         it("Should verify valid signature", async function () {
             const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
@@ -105,8 +99,9 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
                 metaTx.signature.s,
                 metaTx.signature.v
             )).to.not.be.reverted;
+            });
         });
-
+        /*
         it("Should reject invalid signature", async function () {
             const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user2.address]);
             const metaTx = await createSignedMetaTransaction(operator1, functionCall);
@@ -303,9 +298,8 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
     };
     
     const signature = await signer.signTypedData(domain, types, values);
-    //console.log("signature: " + signature);
-    
-    
+    console.log("signature: " + signature);
+
     const { r, s, p, v } = ethers.Signature.from(signature);// splitSignature(signature);
     return {
         userAddress: signer.address,
@@ -314,6 +308,49 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
         functionCall: functionCall
     };
     
+}
+
+async function debugSignature(signer, functionCall, tokenContract, domain) {
+    const signerAddress = await signer.getAddress();
+    const nonce = await tokenContract.getNonce(signerAddress);
+    
+    console.log("=== DEBUG SIGNATURE ===");
+    console.log("Signer address:", signerAddress);
+    console.log("Nonce:", nonce.toString());
+    console.log("Function call:", functionCall);
+    console.log("Domain:", domain);
+    
+    const metaTx = {
+        nonce: nonce,
+        from: signerAddress,
+        functionCall: functionCall
+    };
+    
+    console.log("MetaTx object:", metaTx);
+    
+    const types = {
+        MetaTransaction: [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "functionCall", type: "bytes" }
+        ]
+    };
+    
+    console.log("Types:", types);
+    
+    // Calcola il digest che dovrebbe essere usato
+    const digest = ethers.TypedDataEncoder.hash(domain, types, metaTx);
+    console.log("Expected digest:", digest);
+    
+    const signature = await signer.signTypedData(domain, types, metaTx);
+    const { r, s, v } = ethers.Signature.from(signature);
+    
+    console.log("Signature components:");
+    console.log("r:", r);
+    console.log("s:", s);
+    console.log("v:", v);
+    
+    return { metaTx, signature: { r, s, v } };
 }
 });
 

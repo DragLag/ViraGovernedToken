@@ -13,6 +13,7 @@ import "./ViraStorage.sol";
  */
 abstract contract ViraMetaTransactions is ViraStorage {
     using ECDSA for bytes32;
+    bytes32 public debugDigest;
 
     // ========== META-TRANSACTION EXECUTION ==========
 
@@ -62,10 +63,11 @@ abstract contract ViraMetaTransactions is ViraStorage {
                 )
             )
         );
-        emit DebugDigest(digest);
+        debugDigest = digest;
         
-        address recoveredAddress = digest.recover(abi.encodePacked(sigR, sigS, sigV));
-        return recoveredAddress == user;
+        //address recoveredAddress = digest.recover(abi.encodePacked(sigR, sigS, sigV));
+        address recoveredAddress = ecrecover(digest, sigV, sigR, sigS);
+        return recoveredAddress == user && recoveredAddress != address(0);
     }
 
     function getNonce(address user) public view returns (uint256) {
