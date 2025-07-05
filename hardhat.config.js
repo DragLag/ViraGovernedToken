@@ -11,7 +11,7 @@ module.exports = {
       chainId: 80002
     },
     local: {
-      url: `http://127.0.0.1:8545/`,
+      url: `http://127.0.0.1:8545/`
     }
   },
    etherscan: {
