@@ -37,12 +37,11 @@ describe("Relayer Service Integration", function () {
             const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user.address]);
 
             // 3. Sign meta-transaction
-            const chainId = await ethers.provider.getNetwork().then(n => n.chainId);
             const domain = {
                 name: "ViraGovernedToken",
                 version: "1",
-                chainId: chainId,
-                verifyingContract: token.address
+                chainId: (await ethers.provider.getNetwork()).chainId,
+                verifyingContract: await token.getAddress()
             };
 
             const types = {
@@ -64,9 +63,11 @@ describe("Relayer Service Integration", function () {
 
             // 4. Execute via relayer
             await expect(token.connect(relayer).executeMetaTransaction(
-                operator.address,
+               await operator.getAddress(),
                 functionCall,
-                r, s, v
+                r, 
+                s, 
+                v
             )).to.emit(token, "MetaTransactionExecuted");
 
             // 5. Verify state changes
@@ -74,19 +75,19 @@ describe("Relayer Service Integration", function () {
         });
 
         it("Should handle multiple sequential meta-transactions", async function () {
-            const users = [user, await ethers.getSigner()];
-            
+            let  user1,user2,user3
+            users= [user1,user2,user3];
+            users = await ethers.getSigners();
             for (let i = 0; i < users.length; i++) {
                 const nonce = await token.getNonce(operator.address);
                 const functionCall = token.interface.encodeFunctionData("registerUserMeta", [users[i].address]);
                 
-                const chainId = await ethers.provider.getNetwork().then(n => n.chainId);
-                const domain = {
-                    name: "ViraGovernedToken",
-                    version: "1",
-                    chainId: chainId,
-                    verifyingContract: token.address
-                };
+               const domain = {
+                name: "ViraGovernedToken",
+                version: "1",
+                chainId: (await ethers.provider.getNetwork()).chainId,
+                verifyingContract: await token.getAddress()
+            };
 
                 const types = {
                     MetaTransaction: [
@@ -102,16 +103,20 @@ describe("Relayer Service Integration", function () {
                     functionCall: functionCall
                 };
 
-                const signature = await operator._signTypedData(domain, types, values);
-                const { r, s, v } = ethers.utils.splitSignature(signature);
+                const signature = await operator.signTypedData(domain, types, values);
+                const { r, s, p, v } = ethers.Signature.from(signature);
+
 
                 await token.connect(relayer).executeMetaTransaction(
-                    operator.address,
-                    functionCall,
-                    r, s, v
+                   await operator.getAddress(),
+                functionCall,
+                r, 
+                s, 
+                v
                 );
 
                 expect(await token.getNonce(operator.address)).to.equal(i + 1);
+                
             }
         });
     });
