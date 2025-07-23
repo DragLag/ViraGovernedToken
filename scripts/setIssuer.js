@@ -6,7 +6,7 @@ async function main() {
  
   // Connect to the contract
   const ViraGovernedToken = await ethers.getContractFactory("ViraGovernedToken");
-  const vira = ViraGovernedToken.attach(PUBLIC_KEY);
+  const vira = ViraGovernedToken.attach(CONTRACT_ADDRESS);
   
   const [deployer] = await ethers.getSigners();
   
@@ -22,7 +22,9 @@ async function main() {
     console.log("Transaction hash:", tx.hash);
     
     // Check if the issuer has been added
-    const isAuthorized = await vira.authorizedIssuers(PUBLIC_KEY);
+     console.log(vira.issuerList);
+    const isAuthorized = await vira.authorizedIssuers(deployer.address);
+   
     console.log("Is authorized issuer:", isAuthorized);
     
   } catch (error) {
@@ -30,7 +32,7 @@ async function main() {
   }
 
   console.log("=== ViraGovernedToken authorizedIssuer ===");
-   console.log(`Authorized issuer (${PUBLIC_KEY}):`, await vira.authorizedIssuers(PUBLIC_KEY));
+   console.log(`Authorized issuer (${PUBLIC_KEY}):`, await vira.authorizedIssuers(deployer.address));
 }
 
 main()
