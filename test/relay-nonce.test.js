@@ -91,6 +91,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
             const jsDigest = await getJsDigest(operator1, functionCall, token, domain);
             const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
+            console.log(metaTx)
             await token.connect(relayer1).executeMetaTransaction(
                 await operator1.getAddress(),  // userAddress
                 functionCall,                  // functionCall
@@ -106,7 +107,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
         it("Should verify valid signature", async function () {
             const functionCall = token.interface.encodeFunctionData("registerUserMeta", [user4.address]);
             const metaTx = await createSignedMetaTransaction(operator1, functionCall, token, domain);
-            
+            console.log(metaTx);
             // This should not revert
             await expect(token.connect(relayer1).executeMetaTransaction(
                  await operator1.getAddress(),  
@@ -115,6 +116,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
                 metaTx.signature.s,
                 metaTx.signature.v
             )).to.not.be.reverted;
+            
             });
         });
         
@@ -144,6 +146,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
                 metaTx.signature.s,
                 metaTx.signature.v
             );
+            console.log(token.MetaTransaction);
 
             // Try to replay - should fail
             await expect(token.connect(relayer1).executeMetaTransaction(
@@ -225,7 +228,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             const amount = 100;
             const functionCall = token.interface.encodeFunctionData("adjustBalanceMeta", [user3.address, amount]);
             const metaTx = await createSignedMetaTransaction(issuer1, functionCall, token, domain);
-            
+            console.log(metaTx);
             const balanceBefore = await token.balanceOf(user3.address);
             
             await token.connect(relayer1).executeMetaTransaction(
@@ -237,6 +240,7 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             );
 
             const balanceAfter = await token.balanceOf(user3.address);
+            console.log(token);
             expect(balanceAfter).to.equal(Number(balanceBefore) + amount);
         });
     });

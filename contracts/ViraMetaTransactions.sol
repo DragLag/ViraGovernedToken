@@ -14,7 +14,13 @@ import "./ViraStorage.sol";
 abstract contract ViraMetaTransactions is ViraStorage {
     using ECDSA for bytes32;
     // Uncomment for debugging & testing
-    //bytes32 public debugDigest;
+    bytes32 public debugDigest;
+
+    event DebugSignature(
+        bytes32 digest,
+        address recovered,
+        address expected
+    );
 
     // ========== META-TRANSACTION EXECUTION ==========
 
@@ -53,7 +59,7 @@ abstract contract ViraMetaTransactions is ViraStorage {
         bytes32 sigR,
         bytes32 sigS,
         uint8 sigV
-    ) internal view returns  (bool) {
+    ) internal returns  (bool) {
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(
@@ -69,6 +75,8 @@ abstract contract ViraMetaTransactions is ViraStorage {
         
         //address recoveredAddress = digest.recover(abi.encodePacked(sigR, sigS, sigV));
         address recoveredAddress = ecrecover(digest, sigV, sigR, sigS);
+        emit DebugSignature(digest, recoveredAddress, user);
+
         return recoveredAddress == user && recoveredAddress != address(0);
     }
 
