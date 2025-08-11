@@ -71,7 +71,7 @@ abstract contract ViraMetaTransactions is ViraStorage {
             )
         );
         // Uncomment for debugging & testing
-        //debugDigest = digest;
+        debugDigest = digest;
         
         //address recoveredAddress = digest.recover(abi.encodePacked(sigR, sigS, sigV));
         address recoveredAddress = ecrecover(digest, sigV, sigR, sigS);

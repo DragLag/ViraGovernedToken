@@ -61,4 +61,18 @@ contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthoriza
         return ERC20Upgradeable.transfer(to, amount);
     }
 
+    /**
+     * @dev get contract address for EIP-712 verification
+     */
+    function getVerifyingContract() external view returns (address) {
+        return address(this);
+    }
+
+    /**
+     * @dev get the EIP-712 domain separator
+     */
+    function domainSeparator() public view returns (bytes32) {
+        return _domainSeparatorV4();
+    }
+
 }

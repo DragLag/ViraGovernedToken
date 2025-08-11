@@ -70,13 +70,13 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             expect(relayers).to.include(relayer1.address);
             expect(relayers).to.include(relayer2.address);
         });
-        /*
-        //already integrated in OwnableUpgradeable
-        it("Should only allow owner to manage relayers", async function () {
-            await expect(token.connect(user1).addRelayer(relayer2.address))
-                .to.be.revertedWith("Ownable: caller is not the owner");
+
+        it("Should retun the domain separator", async function () {
+            console.log(domain);
+            const domSep = await token.domainSeparator();
+            const expected = ethers.TypedDataEncoder.hashDomain(domain);
+            expect(domSep).equal(expected);
         });
-        */
     });
 
   
