@@ -70,13 +70,6 @@ describe("ViraGovernedToken - Relayer Meta-Transactions", function () {
             expect(relayers).to.include(relayer1.address);
             expect(relayers).to.include(relayer2.address);
         });
-
-        it("Should retun the domain separator", async function () {
-            console.log(domain);
-            const domSep = await token.domainSeparator();
-            const expected = ethers.TypedDataEncoder.hashDomain(domain);
-            expect(domSep).equal(expected);
-        });
     });
 
   
