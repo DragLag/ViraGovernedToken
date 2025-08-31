@@ -1,7 +1,8 @@
 require("dotenv").config();
 
 async function main() {
-  const PUBLIC_KEY = process.env.PUBLIC_KEY;  
+  //const PUBLIC_KEY = process.env.PUBLIC_KEY;  
+  const PUBLIC_KEY ="0xEE69500F3fEF58003028263cdEa2402361AAbC34"
   const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS; 
  
   // Connect to the contract

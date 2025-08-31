@@ -22,6 +22,9 @@ abstract contract ViraMetaTransactions is ViraStorage {
         address expected
     );
 
+    event DebugMeta(string indexed action, address indexed user, address indexed target, uint256 value);
+    event DebugMetaAdjustBalance( address indexed user, address indexed target, int256 value);
+
     // ========== META-TRANSACTION EXECUTION ==========
 
     function executeMetaTransaction(
@@ -94,22 +97,31 @@ abstract contract ViraMetaTransactions is ViraStorage {
 
         if (selector == this.registerUserMeta.selector) {
             address user = abi.decode(skipFirst4Bytes(functionCall), (address));
+            emit DebugMeta("REGISTER USER", userAddress, user, 0);
             registerUserInternal(userAddress, user);
             return "";
         } else if (selector == this.blockUserMeta.selector) {
             address user = abi.decode(skipFirst4Bytes(functionCall), (address));
+            emit DebugMeta("BLOCK USER", userAddress, user, 0);
             blockUserInternal(userAddress, user);
             return "";
         } else if (selector == this.unblockUserMeta.selector) {
             address user = abi.decode(skipFirst4Bytes(functionCall), (address));
+            emit DebugMeta("UNBLOCK USER", userAddress, user, 0);
             unblockUserInternal(userAddress, user);
             return "";
         } else if (selector == this.adjustBalanceMeta.selector) {
             (address user, int256 amount) = abi.decode(skipFirst4Bytes(functionCall), (address, int256));
+            if (amount >= 0) {
+                emit DebugMeta("ADJUST_BALANCE_INCREASE", userAddress, user, uint256(amount));
+            } else {
+                emit DebugMeta("ADJUST_BALANCE_DECREASE", userAddress, user, uint256(-amount));
+            }
             adjustBalanceInternal(userAddress, user, amount);
             return "";
         } else if (selector == this.transferMeta.selector) {
             (address to, uint256 amount) = abi.decode(skipFirst4Bytes(functionCall), (address, uint256));
+            emit DebugMeta("TRANSFER", userAddress, to, amount);
             _transfer(userAddress, to, amount);
             return "";
         }

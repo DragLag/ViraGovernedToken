@@ -23,6 +23,10 @@ abstract contract ViraAuthorization is ViraStorage {
         _removeFromList(operatorList, operator);
     }
 
+    function getOperators() public view returns (address[] memory) {
+        return operatorList;
+    }
+
     // ========== ISSUER MANAGEMENT ==========
     
     function addIssuer(address issuer) public onlyOwner {
@@ -35,6 +39,10 @@ abstract contract ViraAuthorization is ViraStorage {
     function removeIssuer(address issuer) public onlyOwner {
         authorizedIssuers[issuer] = false;
         _removeFromList(issuerList, issuer);
+    }
+
+    function getIssuers() public view returns (address[] memory) {
+        return issuerList;
     }
 
     // ========== RELAYER MANAGEMENT ==========

@@ -57,9 +57,9 @@ contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthoriza
     /**
      * @dev Moves amount tokens from the caller's account to to
      */
-    function transfer(address to, uint256 amount) public virtual override(ERC20Upgradeable) returns (bool) {
-        return ERC20Upgradeable.transfer(to, amount);
-    }
+    //function transfer(address to, uint256 amount) public virtual override(ERC20Upgradeable) returns (bool) {
+    //    return ERC20Upgradeable.transfer(to, amount);
+    //}
 
     /**
      * @dev get contract address for EIP-712 verification
