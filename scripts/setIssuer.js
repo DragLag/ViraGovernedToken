@@ -2,7 +2,7 @@ require("dotenv").config();
 
 async function main() {
   //const PUBLIC_KEY = process.env.PUBLIC_KEY;  
-  const PUBLIC_KEY ="0xEE69500F3fEF58003028263cdEa2402361AAbC34"
+  const PUBLIC_KEY =process.env.PUBLIC_KEY;
   const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS; 
  
   // Connect to the contract
@@ -15,16 +15,17 @@ async function main() {
   console.log("=== ViraGovernedToken setIssuer ===");
   console.log("Contract Address:", CONTRACT_ADDRESS);
   console.log("Deployer Address:", deployer.address);
+  console.log("Issuer List:",vira.issuerList);
   try {
     
-    const tx = await vira.connect(deployer).addIssuer(deployer.address);
+    const tx = await vira.connect(deployer).addIssuer(PUBLIC_KEY);
     await tx.wait(); 
     console.log("Issuer added successfully!");
     console.log("Transaction hash:", tx.hash);
     
     // Check if the issuer has been added
-     console.log(vira.issuerList);
-    const isAuthorized = await vira.authorizedIssuers(deployer.address);
+    console.log(vira.issuerList);
+    const isAuthorized = await vira.authorizedIssuers(PUBLIC_KEY);
    
     console.log("Is authorized issuer:", isAuthorized);
     
