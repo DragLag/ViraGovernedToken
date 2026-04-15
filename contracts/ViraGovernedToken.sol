@@ -13,12 +13,53 @@ import "./ViraMetaTransactions.sol";
 
 contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthorization, ViraMetaTransactions {
    
+    uint256 public relayerFeePercentage = 100; // 1%
+    uint256 public feeCoefficient = 1e18; // 1x multiplier
+    address public relayerWallet;
+    uint256 public transactionCount;
+    uint256 public lastResetTime;
+
     function initialize() public initializer {
         __ERC20_init("ViraGovernedToken", "VGT");
         __Ownable_init(msg.sender);
         __EIP712_init("ViraGovernedToken", "1");
         authorizedOperators[msg.sender] = true;
         operatorList.push(msg.sender);
+        lastResetTime = block.timestamp;
+    }
+
+    function setRelayerWallet(address _wallet) external onlyOwner {
+        relayerWallet = _wallet;
+    }
+
+    function setFeeCoefficient(uint256 _coefficient) external onlyOwner {
+        feeCoefficient = _coefficient;
+    }
+
+    function _transfer(address sender, address recipient, uint256 amount) internal override {
+        uint256 fee = (amount * relayerFeePercentage * feeCoefficient) / (10000 * 1e18);
+        uint256 amountToSend = amount - fee;
+
+        transactionCount += 1;
+        adjustFeeCoefficient();
+
+        super._transfer(sender, recipient, amountToSend);
+        super._transfer(sender, relayerWallet, fee);
+    }
+
+    function adjustFeeCoefficient() private {
+        if (block.timestamp >= lastResetTime + 1 days) {
+            lastResetTime = block.timestamp;
+            transactionCount = 0;
+        }
+
+        if (transactionCount > 100) {
+            // Increase coefficient by 10% if high volume
+            feeCoefficient = (feeCoefficient * 11) / 10;
+        } else if (transactionCount < 10 && feeCoefficient > 0.5e18) {
+            // Decrease by 10% if low volume, with floor
+            feeCoefficient = (feeCoefficient * 9) / 10;
+        }
     }
 
     function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable) {
@@ -53,13 +94,6 @@ contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthoriza
     function totalSupply() public view virtual override(ERC20Upgradeable) returns (uint256) {
         return ERC20Upgradeable.totalSupply();
     }
-
-    /**
-     * @dev Moves amount tokens from the caller's account to to
-     */
-    //function transfer(address to, uint256 amount) public virtual override(ERC20Upgradeable) returns (bool) {
-    //    return ERC20Upgradeable.transfer(to, amount);
-    //}
 
     /**
      * @dev get contract address for EIP-712 verification
