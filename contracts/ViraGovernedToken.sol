@@ -13,8 +13,8 @@ import "./ViraMetaTransactions.sol";
 
 contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthorization, ViraMetaTransactions {
    
-    uint256 public relayerFeePercentage = 100; // 1%
-    uint256 public feeCoefficient = 1e18; // 1x multiplier
+    uint256 public relayerFeePercentage;
+    uint256 public feeCoefficient;
     address public relayerWallet;
     uint256 public transactionCount;
     uint256 public lastResetTime;
@@ -25,6 +25,8 @@ contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthoriza
         __EIP712_init("ViraGovernedToken", "1");
         authorizedOperators[msg.sender] = true;
         operatorList.push(msg.sender);
+        relayerFeePercentage = 100; // 1%
+        feeCoefficient = 1e18; // 1x multiplier
         lastResetTime = block.timestamp;
     }
 
@@ -36,42 +38,54 @@ contract ViraGovernedToken is ERC20Upgradeable,OwnableUpgradeable, ViraAuthoriza
         feeCoefficient = _coefficient;
     }
 
-    function _transfer(address sender, address recipient, uint256 amount) internal override {
-        uint256 fee = (amount * relayerFeePercentage * feeCoefficient) / (10000 * 1e18);
-        uint256 amountToSend = amount - fee;
-
-        transactionCount += 1;
-        adjustFeeCoefficient();
-
-        super._transfer(sender, recipient, amountToSend);
-        super._transfer(sender, relayerWallet, fee);
-    }
-
     function adjustFeeCoefficient() private {
         if (block.timestamp >= lastResetTime + 1 days) {
+            // Apply low-volume decrease based on previous period's count
+            if (transactionCount < 10 && feeCoefficient > 0.5e18) {
+                feeCoefficient = (feeCoefficient * 9) / 10;
+            }
             lastResetTime = block.timestamp;
             transactionCount = 0;
         }
 
-        if (transactionCount > 100) {
-            // Increase coefficient by 10% if high volume
+        // Apply high-volume increase immediately when threshold is reached
+        if (transactionCount >= 100) {
             feeCoefficient = (feeCoefficient * 11) / 10;
-        } else if (transactionCount < 10 && feeCoefficient > 0.5e18) {
-            // Decrease by 10% if low volume, with floor
-            feeCoefficient = (feeCoefficient * 9) / 10;
         }
     }
 
     function _update(address from, address to, uint256 amount) internal override(ERC20Upgradeable) {
         require(!isBlocked[from], "Sender is blocked");
         require(!isBlocked[to], "Recipient is blocked");
-        super._update(from, to, amount);
 
-        if (to != address(0) && !isHolder[to]) {
-            holders.push(to);
-            isHolder[to] = true;
+        // Apply fee only for actual transfers (not mint/burn)
+        if (from != address(0) && to != address(0)) {
+            uint256 fee = (amount * relayerFeePercentage * feeCoefficient) / (10000 * 1e18);
+            uint256 amountToSend = amount - fee;
+
+            adjustFeeCoefficient();
+            transactionCount += 1;
+
+            super._update(from, to, amountToSend);
+            super._update(from, relayerWallet, fee);
+
+            if (!isHolder[to]) {
+                holders.push(to);
+                isHolder[to] = true;
+            }
+            if (relayerWallet != address(0) && !isHolder[relayerWallet]) {
+                holders.push(relayerWallet);
+                isHolder[relayerWallet] = true;
+            }
+        } else {
+            super._update(from, to, amount);
+
+            if (to != address(0) && !isHolder[to]) {
+                holders.push(to);
+                isHolder[to] = true;
+            }
         }
-        }
+    }
 
     /**
      * @dev Returns the name of the token

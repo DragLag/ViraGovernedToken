@@ -3,7 +3,15 @@ require('@openzeppelin/hardhat-upgrades');
 require("dotenv").config();
 
 module.exports = {
-  solidity: "0.8.30",
+  solidity: {
+    version: "0.8.30",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
   networks: {
     amoyInfura: {
       url: `https://polygon-amoy.infura.io/v3/${process.env.INFURA_API_KEY}`,

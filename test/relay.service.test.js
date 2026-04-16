@@ -30,22 +30,21 @@ describe("Relayer Service Integration - Revenue System", function () {
 
     describe("Revenue Collection in Relayer Workflow", function () {
         it("Should collect fee when processing relayer transaction", async function () {
-            const transferAmount = 1000;
-            const expectedFee = 10; // 1% of 1000 with default coefficient
+            const transferAmount = 1000n;
+            const expectedFee = 10n; // 1% of 1000 with default coefficient
             
             // Initial balances
             const userBalanceBefore = await token.balanceOf(user.address);
             const relayerBalanceBefore = await token.balanceOf(relayerWallet.address);
             
-            // Create transfer function call
+            // Create transfer function call: user sends to operator
             const functionCall = token.interface.encodeFunctionData("transferMeta", [
-                operator.address, 
-                user.address, 
+                operator.address,
                 transferAmount
             ]);
-            
-            // Get nonce and sign
-            const nonce = await token.getNonce(operator.address);
+
+            // Get nonce and sign as user (who has tokens)
+            const nonce = await token.getNonce(user.address);
             const domain = {
                 name: "ViraGovernedToken",
                 version: "1",
@@ -63,27 +62,27 @@ describe("Relayer Service Integration - Revenue System", function () {
 
             const values = {
                 nonce: nonce,
-                from: operator.address,
+                from: user.address,
                 functionCall: functionCall
             };
 
-            const signature = await operator.signTypedData(domain, types, values);
+            const signature = await user.signTypedData(domain, types, values);
             const { r, s, v } = ethers.Signature.from(signature);
 
             // Execute via relayer
             await token.connect(relayer).executeMetaTransaction(
-                operator.address,
+                user.address,
                 functionCall,
                 r,
-                s, 
+                s,
                 v
             );
-            
+
             // Check balances after transaction
             const userBalanceAfter = await token.balanceOf(user.address);
             const relayerBalanceAfter = await token.balanceOf(relayerWallet.address);
-            
-            expect(userBalanceAfter).to.equal(userBalanceBefore - transferAmount + expectedFee);
+
+            expect(userBalanceAfter).to.equal(userBalanceBefore - transferAmount);
             expect(relayerBalanceAfter).to.equal(relayerBalanceBefore + expectedFee);
         });
 
@@ -91,19 +90,18 @@ describe("Relayer Service Integration - Revenue System", function () {
             // Process 101 transactions to trigger coefficient increase
             for (let i = 0; i < 101; i++) {
                 const functionCall = token.interface.encodeFunctionData("transferMeta", [
-                    operator.address, 
-                    user.address, 
+                    operator.address,
                     100
                 ]);
-                
-                const nonce = await token.getNonce(operator.address);
+
+                const nonce = await token.getNonce(user.address);
                 const domain = {
                     name: "ViraGovernedToken",
                     version: "1",
                     chainId: (await ethers.provider.getNetwork()).chainId,
                     verifyingContract: await token.getAddress()
                 };
-                
+
                 const types = {
                     MetaTransaction: [
                         { name: 'nonce', type: 'uint256' },
@@ -114,18 +112,18 @@ describe("Relayer Service Integration - Revenue System", function () {
 
                 const values = {
                     nonce: nonce,
-                    from: operator.address,
+                    from: user.address,
                     functionCall: functionCall
                 };
 
-                const signature = await operator.signTypedData(domain, types, values);
+                const signature = await user.signTypedData(domain, types, values);
                 const { r, s, v } = ethers.Signature.from(signature);
 
                 await token.connect(relayer).executeMetaTransaction(
-                    operator.address,
+                    user.address,
                     functionCall,
                     r,
-                    s, 
+                    s,
                     v
                 );
             }
@@ -140,19 +138,18 @@ describe("Relayer Service Integration - Revenue System", function () {
             
             for (let i = 0; i < 5; i++) {
                 const functionCall = token.interface.encodeFunctionData("transferMeta", [
-                    operator.address, 
-                    user.address, 
+                    operator.address,
                     100
                 ]);
-                
-                const nonce = await token.getNonce(operator.address);
+
+                const nonce = await token.getNonce(user.address);
                 const domain = {
                     name: "ViraGovernedToken",
                     version: "1",
                     chainId: (await ethers.provider.getNetwork()).chainId,
                     verifyingContract: await token.getAddress()
                 };
-                
+
                 const types = {
                     MetaTransaction: [
                         { name: 'nonce', type: 'uint256' },
@@ -163,18 +160,18 @@ describe("Relayer Service Integration - Revenue System", function () {
 
                 const values = {
                     nonce: nonce,
-                    from: operator.address,
+                    from: user.address,
                     functionCall: functionCall
                 };
 
-                const signature = await operator.signTypedData(domain, types, values);
+                const signature = await user.signTypedData(domain, types, values);
                 const { r, s, v } = ethers.Signature.from(signature);
 
                 await token.connect(relayer).executeMetaTransaction(
-                    operator.address,
+                    user.address,
                     functionCall,
                     r,
-                    s, 
+                    s,
                     v
                 );
             }
