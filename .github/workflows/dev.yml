@@ -16,6 +16,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: Validate secrets
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+        run: |
+          if [ -z "$PRIVATE_KEY" ]; then echo "ERROR: PRIVATE_KEY secret not set"; exit 1; fi
+          if [ "${#PRIVATE_KEY}" -lt 64 ]; then echo "ERROR: PRIVATE_KEY too short (${#PRIVATE_KEY} chars, need 64)"; exit 1; fi
+          if [ -z "$INFURA_API_KEY" ]; then echo "ERROR: INFURA_API_KEY secret not set"; exit 1; fi
+          echo "Secrets OK (key length: ${#PRIVATE_KEY})"
+
       - name: Install dependencies
         run: npm install
 

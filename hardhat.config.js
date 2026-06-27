@@ -15,7 +15,9 @@ module.exports = {
   networks: {
     amoyInfura: {
       url: `https://polygon-amoy.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      accounts: [`0x${process.env.PRIVATE_KEY}`],
+      accounts: process.env.PRIVATE_KEY
+        ? [process.env.PRIVATE_KEY.startsWith('0x') ? process.env.PRIVATE_KEY : `0x${process.env.PRIVATE_KEY}`]
+        : [],
       chainId: 80002
     },
     local: {
