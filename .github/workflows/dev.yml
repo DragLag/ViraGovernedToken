@@ -1,0 +1,49 @@
+name: dev — test & deploy
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      - name: Run tests
+        run: npx hardhat test
+
+      - name: Deploy to Polygon Amoy
+        id: deploy
+        env:
+          INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          POLYGONSCAN_API_KEY: ${{ secrets.POLYGONSCAN_API_KEY }}
+        run: |
+          OUTPUT=$(npx hardhat run scripts/initialize.js --network amoyInfura 2>&1)
+          echo "$OUTPUT"
+          ADDRESS=$(echo "$OUTPUT" | grep "ViraGovernedToken deployed to:" | awk '{print $NF}')
+          echo "contract_address=$ADDRESS" >> $GITHUB_OUTPUT
+
+      - name: Verify on Polygonscan
+        env:
+          INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          POLYGONSCAN_API_KEY: ${{ secrets.POLYGONSCAN_API_KEY }}
+        run: npx hardhat verify --network amoyInfura ${{ steps.deploy.outputs.contract_address }}
+
+      - name: Print contract address
+        run: echo "Contract deployed at ${{ steps.deploy.outputs.contract_address }}"
