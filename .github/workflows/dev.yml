@@ -47,12 +47,15 @@ jobs:
           ADDRESS=$(echo "$OUTPUT" | grep "ViraGovernedToken deployed to:" | awk '{print $NF}')
           echo "contract_address=$ADDRESS" >> $GITHUB_OUTPUT
 
+      - name: Wait for deployment to propagate
+        run: sleep 30
+
       - name: Verify on Polygonscan
         env:
           INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           POLYGONSCAN_API_KEY: ${{ secrets.POLYGONSCAN_API_KEY }}
-        run: npx hardhat verify --network amoyInfura ${{ steps.deploy.outputs.contract_address }}
+        run: npx hardhat verify --network amoyInfura ${{ steps.deploy.outputs.contract_address }} || true
 
       - name: Print contract address
         run: echo "Contract deployed at ${{ steps.deploy.outputs.contract_address }}"
