@@ -25,9 +25,17 @@ module.exports = {
       url: `http://127.0.0.1:8545/`
     }
   },
-   etherscan: {
-    apiKey: {
-      polygonAmoy: process.env.POLYGONSCAN_API_KEY
-    }
+  etherscan: {
+    apiKey: process.env.POLYGONSCAN_API_KEY,
+    customChains: [
+      {
+        network: "amoyInfura",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com"
+        }
+      }
+    ]
   },
 };
